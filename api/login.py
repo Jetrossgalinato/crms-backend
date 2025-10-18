@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,4 +25,19 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     access_token = create_access_token({"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    
+    # Return token AND user data
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "is_approved": user.is_approved,
+            "acc_role": user.acc_role,
+            "department": user.department,
+            "phone_number": user.phone_number
+        }
+    }

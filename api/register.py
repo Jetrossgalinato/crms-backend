@@ -21,6 +21,7 @@ class RegisterRequest(BaseModel):
     acc_role: str
     status: str = "Pending"
     is_employee: bool = True
+    is_approved: bool = False
 
 @router.post("/register")
 async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
@@ -42,6 +43,7 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
         acc_role=request.acc_role,
         status=request.status,
         is_employee=1 if request.is_employee else 0,
+        is_approved=1 if request.is_approved else 0,
         hashed_password=hashed_password
     )
     db.add(new_user)
