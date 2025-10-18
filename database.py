@@ -20,7 +20,9 @@ class User(Base):
     last_name = Column(String, nullable=False)
     department = Column(String, nullable=False)
     phone_number = Column(String, nullable=False)
-    role = Column(String, nullable=False)
+    acc_role = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="Pending")
+    is_employee = Column(Integer, nullable=False, default=1)
     hashed_password = Column(String, nullable=False)
 
 

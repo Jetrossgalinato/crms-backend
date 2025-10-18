@@ -18,7 +18,9 @@ class RegisterRequest(BaseModel):
     department: str
     phone_number: str
     password: str
-    role: str
+    acc_role: str
+    status: str = "Pending"
+    is_employee: bool = True
 
 @router.post("/register")
 async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
@@ -37,7 +39,9 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
         last_name=request.last_name,
         department=request.department,
         phone_number=request.phone_number,
-        role=request.role,
+        acc_role=request.acc_role,
+        status=request.status,
+        is_employee=1 if request.is_employee else 0,
         hashed_password=hashed_password
     )
     db.add(new_user)
@@ -48,5 +52,6 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
         "message": "User registered successfully",
         "email": new_user.email,
         "first_name": new_user.first_name,
-        "last_name": new_user.last_name
+        "last_name": new_user.last_name,
+        "status": new_user.status
     }
