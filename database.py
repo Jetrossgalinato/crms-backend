@@ -23,6 +23,7 @@ class User(Base):
     acc_role = Column(String, nullable=False)
     status = Column(String, nullable=False, default="Pending")
     is_employee = Column(Integer, nullable=False, default=1)
+    is_approved = Column(Integer, nullable=False, default=0)
     hashed_password = Column(String, nullable=False)
 
 
