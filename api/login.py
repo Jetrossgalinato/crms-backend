@@ -7,20 +7,20 @@ router = APIRouter()
 
 # Example user database (replace with real DB integration)
 fake_users_db = {
-    "admin": {
-        "username": "admin",
+    "admin@example.com": {
+        "email": "admin@example.com",
         "hashed_password": get_password_hash("password")
     }
 }
 
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
 
 @router.post("/login")
 async def login(request: LoginRequest):
-    user = fake_users_db.get(request.username)
+    user = fake_users_db.get(request.email)
     if not user or not verify_password(request.password, user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    access_token = create_access_token({"sub": user["username"]})
+    access_token = create_access_token({"sub": user["email"]})
     return {"access_token": access_token, "token_type": "bearer"}
