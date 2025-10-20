@@ -7,6 +7,7 @@ from api.login import router as login_router
 from api.register import router as register_router
 from api.account_requests import router as account_requests_router
 from api.auth import router as auth_router
+from api.notifications import router as notifications_router
 from database import engine, Base
 
 app = FastAPI()
@@ -29,3 +30,4 @@ app.include_router(login_router, prefix="/api")
 app.include_router(register_router, prefix="/api")
 app.include_router(account_requests_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
+app.include_router(notifications_router, prefix="/api")
