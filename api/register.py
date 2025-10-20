@@ -43,8 +43,8 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
         phone_number=request.phone_number,
         acc_role=request.acc_role,
         status=request.status,
-        is_employee=1 if request.is_employee else 0,
-        is_approved=1 if request.is_approved else 0,
+        is_employee=request.is_employee,
+        is_approved=request.is_approved,
         hashed_password=hashed_password
     )
     db.add(new_user)

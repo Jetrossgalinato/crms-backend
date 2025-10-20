@@ -36,7 +36,8 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
             "first_name": user.first_name,
             "last_name": user.last_name,
             "is_approved": user.is_approved,
-            "acc_role": user.acc_role,
+            "is_employee": user.is_employee,
+            "role": user.acc_role,
             "department": user.department,
             "phone_number": user.phone_number
         }

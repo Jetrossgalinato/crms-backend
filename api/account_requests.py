@@ -85,7 +85,7 @@ async def approve_account_request(
     user = user_result.scalar_one_or_none()
     
     if user:
-        user.is_approved = 1
+        user.is_approved = True
         user.status = "Approved"
         user.acc_role = body.approved_acc_role
     

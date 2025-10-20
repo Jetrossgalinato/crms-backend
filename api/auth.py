@@ -15,8 +15,10 @@ async def get_db():
         yield session
 
 class AuthVerifyResponse(BaseModel):
-    user: dict
+    user_id: str
+    email: str
     role: str
+    user: dict
 
 @router.get("/auth/verify", response_model=AuthVerifyResponse)
 async def verify_auth(
@@ -47,18 +49,21 @@ async def verify_auth(
         raise HTTPException(status_code=401, detail="User not found")
     
     # Check if user is approved
-    if user.is_approved == 0:
+    if not user.is_approved:
         raise HTTPException(status_code=403, detail="Account pending approval")
     
     return AuthVerifyResponse(
+        user_id=str(user.id),  # At top level for easy access
+        email=user.email,
+        role=user.acc_role,
         user={
             "id": user.id,
+            "user_id": str(user.id),
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
             "department": user.department,
             "phone_number": user.phone_number,
             "status": user.status,
-        },
-        role=user.acc_role
+        }
     )

@@ -23,8 +23,8 @@ class User(Base):
     phone_number = Column(String, nullable=False)
     acc_role = Column(String, nullable=False)
     status = Column(String, nullable=False, default="Pending")
-    is_employee = Column(Integer, nullable=False, default=1)
-    is_approved = Column(Integer, nullable=False, default=0)
+    is_employee = Column(Boolean, nullable=False, default=True)
+    is_approved = Column(Boolean, nullable=False, default=False)
     hashed_password = Column(String, nullable=False)
 
 class AccountRequest(Base):
@@ -51,6 +51,51 @@ class Notification(Base):
     message = Column(String, nullable=False)
     type = Column(String, nullable=False)  # info, success, warning, error
     is_read = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+class Facility(Base):
+    __tablename__ = "facilities"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+
+class Equipment(Base):
+    __tablename__ = "equipments"
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    name = Column(String, nullable=False)
+    po_number = Column(String, nullable=True)
+    unit_number = Column(String, nullable=True)
+    brand_name = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    facility = Column(String, nullable=True)
+    facility_id = Column(Integer, ForeignKey("facilities.id"), nullable=True)
+    category = Column(String, nullable=True)
+    status = Column(String, nullable=True)  # Working, In Use, For Repair
+    date_acquire = Column(String, nullable=True)
+    supplier = Column(String, nullable=True)
+    amount = Column(String, nullable=True)
+    estimated_life = Column(String, nullable=True)
+    item_number = Column(String, nullable=True)
+    property_number = Column(String, nullable=True)
+    control_number = Column(String, nullable=True)
+    serial_number = Column(String, nullable=True)
+    person_liable = Column(String, nullable=True)
+    remarks = Column(String, nullable=True)
+    updated_at = Column(DateTime, nullable=True)
+    image = Column(String, nullable=True)
+
+class Borrowing(Base):
+    __tablename__ = "borrowing"
+    id = Column(Integer, primary_key=True, index=True)
+    borrowed_item = Column(Integer, ForeignKey("equipments.id", ondelete="CASCADE"), nullable=False)
+    borrowers_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    purpose = Column(String, nullable=False)
+    start_date = Column(String, nullable=False)
+    end_date = Column(String, nullable=False)
+    return_date = Column(String, nullable=False)
+    request_status = Column(String, nullable=True)  # Pending, Approved, Rejected
+    return_status = Column(String, nullable=True)  # Returned, Not Returned, Overdue
+    availability = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
