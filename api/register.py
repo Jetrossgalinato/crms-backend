@@ -3,7 +3,8 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from api.auth_utils import get_password_hash
-from database import SessionLocal, User
+from database import SessionLocal, User, AccountRequest
+from datetime import datetime
 
 router = APIRouter()
 
@@ -42,13 +43,31 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
         phone_number=request.phone_number,
         acc_role=request.acc_role,
         status=request.status,
-        is_employee=1 if request.is_employee else 0,
-        is_approved=1 if request.is_approved else 0,
+        is_employee=request.is_employee,
+        is_approved=request.is_approved,
         hashed_password=hashed_password
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
+    
+    # Create account request for users with is_approved = 0
+    if not request.is_approved:
+        account_request = AccountRequest(
+            user_id=new_user.id,
+            first_name=new_user.first_name,
+            last_name=new_user.last_name,
+            email=new_user.email,
+            status="Pending",
+            department=new_user.department,
+            phone_number=new_user.phone_number,
+            acc_role=new_user.acc_role,
+            is_supervisor=False,
+            is_intern=False,
+            created_at=datetime.utcnow()
+        )
+        db.add(account_request)
+        await db.commit()
     
     return {
         "message": "User registered successfully",
