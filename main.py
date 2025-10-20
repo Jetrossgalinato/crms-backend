@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.login import router as login_router
 from api.register import router as register_router
+from api.account_requests import router as account_requests_router
 from database import engine, Base
 
 app = FastAPI()
@@ -25,3 +26,4 @@ async def on_startup():
 
 app.include_router(login_router, prefix="/api")
 app.include_router(register_router, prefix="/api")
+app.include_router(account_requests_router, prefix="/api")

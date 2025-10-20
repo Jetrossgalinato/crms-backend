@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from datetime import datetime
 import os
 from dotenv import load_dotenv
 
@@ -25,5 +26,21 @@ class User(Base):
     is_employee = Column(Integer, nullable=False, default=1)
     is_approved = Column(Integer, nullable=False, default=0)
     hashed_password = Column(String, nullable=False)
+
+class AccountRequest(Base):
+    __tablename__ = "account_requests"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="Pending")  # Pending, Approved, Rejected
+    department = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
+    acc_role = Column(String, nullable=True)
+    approved_acc_role = Column(String, nullable=True)
+    is_supervisor = Column(Boolean, nullable=False, default=False)
+    is_intern = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
