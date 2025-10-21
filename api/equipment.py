@@ -80,6 +80,7 @@ class UserAccountResponse(BaseModel):
     last_name: str
     department: str
     role: str
+    account_request_id: int
 
 class BorrowingRequest(BaseModel):
     borrowed_item: int
@@ -121,11 +122,11 @@ async def get_equipment_list(
         facility_name = None
         if equip.facility_id:
             facility_result = await db.execute(
-                select(Facility).where(Facility.id == equip.facility_id)
+                select(Facility).where(Facility.facility_id == equip.facility_id)
             )
             facility = facility_result.scalar_one_or_none()
             if facility:
-                facility_name = facility.name
+                facility_name = facility.facility_name
         
         # Check if equipment is currently borrowed
         borrowing_check = await db.execute(
@@ -192,7 +193,8 @@ async def get_user_account(
         first_name=user.first_name,
         last_name=user.last_name,
         department=user.department,
-        role=user.acc_role
+        role=user.acc_role,
+        account_request_id=user.id  # Using user.id as bookers_id
     )
 
 @router.post("/borrowing", response_model=BorrowingResponse, status_code=201)
