@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -6,9 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database import SessionLocal, User
 from api.auth_utils import SECRET_KEY, ALGORITHM
+from typing import Optional
 
 router = APIRouter()
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 async def get_db():
     async with SessionLocal() as session:
@@ -22,13 +23,23 @@ class AuthVerifyResponse(BaseModel):
 
 @router.get("/auth/verify", response_model=AuthVerifyResponse)
 async def verify_auth(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Verify JWT token and return user information
     """
-    token = credentials.credentials
+    # Check if Authorization header is present
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+    
+    # Extract token from "Bearer <token>"
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid authentication scheme")
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid authorization header format")
     
     try:
         # Decode JWT token
@@ -38,8 +49,8 @@ async def verify_auth(
         if email is None:
             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
         
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+    except JWTError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
     
     # Get user from database
     result = await db.execute(select(User).where(User.email == email))

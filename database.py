@@ -126,4 +126,30 @@ class Borrowing(Base):
     availability = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+class Supply(Base):
+    __tablename__ = "supplies"
+    supply_id = Column(Integer, primary_key=True, index=True)
+    supply_name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    category = Column(String, nullable=False)
+    quantity = Column(Integer, nullable=False, default=0)
+    stocking_point = Column(Integer, nullable=False, default=0)
+    stock_unit = Column(String, nullable=False)
+    facility_id = Column(Integer, ForeignKey("facilities.facility_id"), nullable=True)
+    remarks = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
+
+class Acquiring(Base):
+    __tablename__ = "acquiring"
+    id = Column(Integer, primary_key=True, index=True)
+    acquirers_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    supply_id = Column(Integer, ForeignKey("supplies.supply_id", ondelete="CASCADE"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    purpose = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="Pending")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
+
 
