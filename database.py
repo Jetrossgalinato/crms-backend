@@ -13,6 +13,10 @@ engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
 
+async def get_db():
+    async with SessionLocal() as session:
+        yield session
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -55,8 +59,32 @@ class Notification(Base):
 
 class Facility(Base):
     __tablename__ = "facilities"
+    facility_id = Column(Integer, primary_key=True, index=True)
+    facility_name = Column(String, nullable=False)
+    facility_type = Column(String, nullable=False)
+    floor_level = Column(String, nullable=False)
+    capacity = Column(Integer, nullable=False)
+    description = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="Available")
+    image_url = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
+
+class Booking(Base):
+    __tablename__ = "bookings"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, nullable=False)
+    bookers_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    facility_id = Column(Integer, ForeignKey("facilities.facility_id", ondelete="CASCADE"), nullable=True)
+    equipment_id = Column(Integer, nullable=True)
+    supply_id = Column(Integer, nullable=True)
+    purpose = Column(String, nullable=False)
+    start_date = Column(String, nullable=False)
+    end_date = Column(String, nullable=False)
+    return_date = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="Pending")
+    request_type = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
 
 class Equipment(Base):
     __tablename__ = "equipments"
@@ -68,7 +96,7 @@ class Equipment(Base):
     brand_name = Column(String, nullable=True)
     description = Column(String, nullable=True)
     facility = Column(String, nullable=True)
-    facility_id = Column(Integer, ForeignKey("facilities.id"), nullable=True)
+    facility_id = Column(Integer, ForeignKey("facilities.facility_id"), nullable=True)
     category = Column(String, nullable=True)
     status = Column(String, nullable=True)  # Working, In Use, For Repair
     date_acquire = Column(String, nullable=True)
@@ -97,5 +125,31 @@ class Borrowing(Base):
     return_status = Column(String, nullable=True)  # Returned, Not Returned, Overdue
     availability = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+class Supply(Base):
+    __tablename__ = "supplies"
+    supply_id = Column(Integer, primary_key=True, index=True)
+    supply_name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    category = Column(String, nullable=False)
+    quantity = Column(Integer, nullable=False, default=0)
+    stocking_point = Column(Integer, nullable=False, default=0)
+    stock_unit = Column(String, nullable=False)
+    facility_id = Column(Integer, ForeignKey("facilities.facility_id"), nullable=True)
+    remarks = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
+
+class Acquiring(Base):
+    __tablename__ = "acquiring"
+    id = Column(Integer, primary_key=True, index=True)
+    acquirers_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    supply_id = Column(Integer, ForeignKey("supplies.supply_id", ondelete="CASCADE"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    purpose = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="Pending")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
 
 
