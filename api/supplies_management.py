@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from database import get_db, Supply, Facility
@@ -7,8 +7,14 @@ from typing import Optional, List
 from datetime import datetime
 from jose import JWTError, jwt
 from api.auth_utils import SECRET_KEY, ALGORITHM
+import os
+import uuid
 
 router = APIRouter()
+
+# Ensure upload directory exists
+UPLOAD_DIR = "uploads/supply-images"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Authentication dependency
 async def verify_token(authorization: Optional[str] = Header(None)):
@@ -63,8 +69,37 @@ class BulkImportRequest(BaseModel):
 
 class LogActionRequest(BaseModel):
     action: str
-    supply_id: int
+    supply_id: Optional[int] = None
     details: Optional[str] = None
+    
+    class Config:
+        # Allow extra fields from frontend
+        extra = "allow"
+
+# Helper function to save uploaded file
+async def save_upload_file(upload_file: UploadFile) -> str:
+    """Save uploaded file and return the URL path"""
+    # Validate file type
+    allowed_types = ["image/png", "image/jpeg", "image/jpg"]
+    if upload_file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only PNG and JPEG images are allowed")
+    
+    # Validate file size (max 5MB)
+    contents = await upload_file.read()
+    if len(contents) > 5 * 1024 * 1024:  # 5MB
+        raise HTTPException(status_code=400, detail="File size must not exceed 5MB")
+    
+    # Generate unique filename
+    file_extension = upload_file.filename.split(".")[-1]
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    
+    # Save file
+    with open(file_path, "wb") as f:
+        f.write(contents)
+    
+    # Return URL path
+    return f"/uploads/supply-images/{unique_filename}"
 
 # Helper function to format supply response
 async def format_supply_response(supply: Supply, db: AsyncSession):
@@ -138,6 +173,26 @@ async def get_all_facilities(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching facilities: {str(e)}")
+
+@router.post("/supplies/upload-image")
+async def upload_supply_image(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(verify_token)
+):
+    """Upload an image for a supply item"""
+    try:
+        # Save the uploaded file
+        image_url = await save_upload_file(file)
+        
+        return {
+            "image_url": f"http://localhost:8000{image_url}"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error uploading image: {str(e)}")
 
 @router.post("/supplies", status_code=201)
 async def create_supply(
@@ -373,6 +428,7 @@ async def bulk_import_supplies(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error importing supplies: {str(e)}")
 
+@router.post("/supply-logs")
 @router.post("/supplies/log-action")
 async def log_supply_action(
     log_data: LogActionRequest,
@@ -381,6 +437,7 @@ async def log_supply_action(
 ):
     """
     Log supply management actions (create, update, delete)
+    Supports both /supply-logs and /supplies/log-action endpoints
     Note: This endpoint is ready but requires SupplyLog model to be added to database.py
     """
     try:
