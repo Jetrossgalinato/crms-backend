@@ -14,6 +14,7 @@ from api.booking import router as booking_router
 from api.supplies import router as supplies_router
 from api.acquiring import router as acquiring_router
 from api.profile import router as profile_router
+from api.dashboard import router as dashboard_router
 from database import engine, Base
 
 app = FastAPI()
@@ -43,3 +44,4 @@ app.include_router(booking_router, prefix="/api")
 app.include_router(supplies_router, prefix="/api")
 app.include_router(acquiring_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")
