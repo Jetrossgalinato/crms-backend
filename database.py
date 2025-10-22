@@ -63,8 +63,12 @@ class Facility(Base):
     facility_name = Column(String, nullable=False)
     facility_type = Column(String, nullable=False)
     floor_level = Column(String, nullable=False)
-    capacity = Column(Integer, nullable=False)
+    capacity = Column(Integer, nullable=True)  # Made optional
+    connection_type = Column(String, nullable=True)
+    cooling_tools = Column(String, nullable=True)
+    building = Column(String, nullable=True)
     description = Column(String, nullable=True)
+    remarks = Column(String, nullable=True)
     status = Column(String, nullable=False, default="Available")
     image_url = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
