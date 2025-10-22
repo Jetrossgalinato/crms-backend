@@ -39,8 +39,12 @@ class FacilityCreate(BaseModel):
     facility_name: str
     facility_type: str
     floor_level: str
-    capacity: int
+    capacity: Optional[int] = None
+    connection_type: Optional[str] = None
+    cooling_tools: Optional[str] = None
+    building: Optional[str] = None
     description: Optional[str] = None
+    remarks: Optional[str] = None
     status: str = "Available"
 
 class FacilityUpdate(BaseModel):
@@ -48,7 +52,11 @@ class FacilityUpdate(BaseModel):
     facility_type: Optional[str] = None
     floor_level: Optional[str] = None
     capacity: Optional[int] = None
+    connection_type: Optional[str] = None
+    cooling_tools: Optional[str] = None
+    building: Optional[str] = None
     description: Optional[str] = None
+    remarks: Optional[str] = None
     status: Optional[str] = None
 
 class BulkDeleteRequest(BaseModel):
@@ -106,7 +114,11 @@ async def get_all_facilities(
                 "facility_type": facility.facility_type,
                 "floor_level": facility.floor_level,
                 "capacity": facility.capacity,
+                "connection_type": facility.connection_type,
+                "cooling_tools": facility.cooling_tools,
+                "building": facility.building,
                 "description": facility.description,
+                "remarks": facility.remarks,
                 "status": facility.status,
                 "image_url": facility.image_url,
                 "created_at": facility.created_at.isoformat() if facility.created_at else None,
@@ -119,18 +131,72 @@ async def get_all_facilities(
         raise HTTPException(status_code=500, detail=f"Error fetching facilities: {str(e)}")
 
 @router.post("/facilities")
-async def create_facility(
+async def create_facility_json(
+    facility_data: FacilityCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(verify_token)
+):
+    """Create a new facility with JSON data (no image upload)"""
+    try:
+        # Create new facility
+        new_facility = Facility(
+            facility_name=facility_data.facility_name,
+            facility_type=facility_data.facility_type,
+            floor_level=facility_data.floor_level,
+            capacity=facility_data.capacity,
+            connection_type=facility_data.connection_type,
+            cooling_tools=facility_data.cooling_tools,
+            building=facility_data.building,
+            description=facility_data.description,
+            remarks=facility_data.remarks,
+            status=facility_data.status,
+            created_at=datetime.utcnow()
+        )
+        
+        db.add(new_facility)
+        await db.commit()
+        await db.refresh(new_facility)
+        
+        return {
+            "message": "Facility created successfully",
+            "facility": {
+                "facility_id": new_facility.facility_id,
+                "facility_name": new_facility.facility_name,
+                "facility_type": new_facility.facility_type,
+                "floor_level": new_facility.floor_level,
+                "capacity": new_facility.capacity,
+                "connection_type": new_facility.connection_type,
+                "cooling_tools": new_facility.cooling_tools,
+                "building": new_facility.building,
+                "description": new_facility.description,
+                "remarks": new_facility.remarks,
+                "status": new_facility.status,
+                "image_url": new_facility.image_url,
+                "created_at": new_facility.created_at.isoformat()
+            }
+        }
+    
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error creating facility: {str(e)}")
+
+@router.post("/facilities/with-image")
+async def create_facility_with_image(
     facility_name: str = Form(...),
     facility_type: str = Form(...),
     floor_level: str = Form(...),
-    capacity: int = Form(...),
+    capacity: Optional[int] = Form(None),
+    connection_type: Optional[str] = Form(None),
+    cooling_tools: Optional[str] = Form(None),
+    building: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
+    remarks: Optional[str] = Form(None),
     status: str = Form("Available"),
     image: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
-    """Create a new facility with optional image upload"""
+    """Create a new facility with optional image upload (Form data)"""
     try:
         # Handle image upload
         image_url = None
@@ -143,7 +209,11 @@ async def create_facility(
             facility_type=facility_type,
             floor_level=floor_level,
             capacity=capacity,
+            connection_type=connection_type,
+            cooling_tools=cooling_tools,
+            building=building,
             description=description,
+            remarks=remarks,
             status=status,
             image_url=image_url,
             created_at=datetime.utcnow()
@@ -161,7 +231,11 @@ async def create_facility(
                 "facility_type": new_facility.facility_type,
                 "floor_level": new_facility.floor_level,
                 "capacity": new_facility.capacity,
+                "connection_type": new_facility.connection_type,
+                "cooling_tools": new_facility.cooling_tools,
+                "building": new_facility.building,
                 "description": new_facility.description,
+                "remarks": new_facility.remarks,
                 "status": new_facility.status,
                 "image_url": new_facility.image_url,
                 "created_at": new_facility.created_at.isoformat()
@@ -179,7 +253,11 @@ async def update_facility(
     facility_type: Optional[str] = Form(None),
     floor_level: Optional[str] = Form(None),
     capacity: Optional[int] = Form(None),
+    connection_type: Optional[str] = Form(None),
+    cooling_tools: Optional[str] = Form(None),
+    building: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
+    remarks: Optional[str] = Form(None),
     status: Optional[str] = Form(None),
     image: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
@@ -215,8 +293,16 @@ async def update_facility(
             facility.floor_level = floor_level
         if capacity is not None:
             facility.capacity = capacity
+        if connection_type is not None:
+            facility.connection_type = connection_type
+        if cooling_tools is not None:
+            facility.cooling_tools = cooling_tools
+        if building is not None:
+            facility.building = building
         if description is not None:
             facility.description = description
+        if remarks is not None:
+            facility.remarks = remarks
         if status is not None:
             facility.status = status
         
@@ -233,7 +319,11 @@ async def update_facility(
                 "facility_type": facility.facility_type,
                 "floor_level": facility.floor_level,
                 "capacity": facility.capacity,
+                "connection_type": facility.connection_type,
+                "cooling_tools": facility.cooling_tools,
+                "building": facility.building,
                 "description": facility.description,
+                "remarks": facility.remarks,
                 "status": facility.status,
                 "image_url": facility.image_url,
                 "updated_at": facility.updated_at.isoformat() if facility.updated_at else None
@@ -280,13 +370,14 @@ async def delete_facility(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting facility: {str(e)}")
 
+@router.delete("/facilities/bulk-delete")
 @router.post("/facilities/bulk-delete")
 async def bulk_delete_facilities(
     request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
-    """Delete multiple facilities"""
+    """Delete multiple facilities (supports both DELETE and POST methods)"""
     try:
         if not request.facility_ids:
             raise HTTPException(status_code=400, detail="No facility IDs provided")
