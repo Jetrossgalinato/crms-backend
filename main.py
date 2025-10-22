@@ -12,13 +12,13 @@ from api.notifications import router as notifications_router
 from api.equipment import router as equipment_router
 from api.facilities import router as facilities_router
 from api.booking import router as booking_router
-from api.supplies import router as supplies_router
 from api.acquiring import router as acquiring_router
 from api.profile import router as profile_router
 from api.dashboard import router as dashboard_router
 from api.equipment_management import router as equipment_management_router
 from api.sidebar import router as sidebar_router
 from api.facilities_management import router as facilities_management_router
+from api.supplies_management import router as supplies_management_router
 from database import engine, Base
 import os
 
@@ -50,10 +50,10 @@ app.include_router(notifications_router, prefix="/api")
 app.include_router(equipment_router, prefix="/api")
 app.include_router(facilities_router, prefix="/api")
 app.include_router(booking_router, prefix="/api")
-app.include_router(supplies_router, prefix="/api")
 app.include_router(acquiring_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(sidebar_router, prefix="/api")
 app.include_router(equipment_management_router)
 app.include_router(facilities_management_router, prefix="/api")
+app.include_router(supplies_management_router, prefix="/api")
