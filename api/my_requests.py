@@ -42,6 +42,9 @@ class MarkDoneRequest(BaseModel):
     booking_ids: List[int]
     completion_notes: Optional[str] = None
 
+class BulkDeleteRequest(BaseModel):
+    ids: List[int]
+
 # Helper function to get user_id from email
 async def get_user_id_from_email(email: str, db: AsyncSession) -> int:
     """Get user ID from email"""
@@ -347,7 +350,7 @@ async def mark_booking_done(
 
 @router.delete("/borrowing/bulk-delete")
 async def bulk_delete_borrowing(
-    ids: List[int] = Query(..., description="List of borrowing IDs to delete"),
+    request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
@@ -357,7 +360,7 @@ async def bulk_delete_borrowing(
         user_id = await get_user_id_from_email(current_user["email"], db)
         
         # Validate ownership and check status
-        for borrowing_id in ids:
+        for borrowing_id in request.ids:
             result = await db.execute(
                 select(Borrowing).where(Borrowing.id == borrowing_id)
             )
@@ -380,13 +383,13 @@ async def bulk_delete_borrowing(
         
         # Delete borrowings
         await db.execute(
-            delete(Borrowing).where(Borrowing.id.in_(ids))
+            delete(Borrowing).where(Borrowing.id.in_(request.ids))
         )
         await db.commit()
         
         return {
             "success": True,
-            "deleted_count": len(ids),
+            "deleted_count": len(request.ids),
             "message": "Borrowing requests deleted successfully"
         }
     
@@ -398,7 +401,7 @@ async def bulk_delete_borrowing(
 
 @router.delete("/booking/bulk-delete")
 async def bulk_delete_booking(
-    ids: List[int] = Query(..., description="List of booking IDs to delete"),
+    request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
@@ -408,7 +411,7 @@ async def bulk_delete_booking(
         user_id = await get_user_id_from_email(current_user["email"], db)
         
         # Validate ownership and check status
-        for booking_id in ids:
+        for booking_id in request.ids:
             result = await db.execute(
                 select(Booking).where(Booking.id == booking_id)
             )
@@ -431,13 +434,13 @@ async def bulk_delete_booking(
         
         # Delete bookings
         await db.execute(
-            delete(Booking).where(Booking.id.in_(ids))
+            delete(Booking).where(Booking.id.in_(request.ids))
         )
         await db.commit()
         
         return {
             "success": True,
-            "deleted_count": len(ids),
+            "deleted_count": len(request.ids),
             "message": "Booking requests deleted successfully"
         }
     
@@ -449,7 +452,7 @@ async def bulk_delete_booking(
 
 @router.delete("/acquiring/bulk-delete")
 async def bulk_delete_acquiring(
-    ids: List[int] = Query(..., description="List of acquiring IDs to delete"),
+    request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
@@ -459,7 +462,7 @@ async def bulk_delete_acquiring(
         user_id = await get_user_id_from_email(current_user["email"], db)
         
         # Validate ownership and check status
-        for acquiring_id in ids:
+        for acquiring_id in request.ids:
             result = await db.execute(
                 select(Acquiring).where(Acquiring.id == acquiring_id)
             )
@@ -482,13 +485,13 @@ async def bulk_delete_acquiring(
         
         # Delete acquirings
         await db.execute(
-            delete(Acquiring).where(Acquiring.id.in_(ids))
+            delete(Acquiring).where(Acquiring.id.in_(request.ids))
         )
         await db.commit()
         
         return {
             "success": True,
-            "deleted_count": len(ids),
+            "deleted_count": len(request.ids),
             "message": "Acquiring requests deleted successfully"
         }
     
