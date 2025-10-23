@@ -84,7 +84,7 @@ class Booking(Base):
     purpose = Column(String, nullable=False)
     start_date = Column(String, nullable=False)
     end_date = Column(String, nullable=False)
-    return_date = Column(String, nullable=False)
+    return_date = Column(String, nullable=True)  # Optional for facility bookings
     status = Column(String, nullable=False, default="Pending")
     request_type = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
