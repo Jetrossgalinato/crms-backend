@@ -133,10 +133,9 @@ async def format_supply_response(supply: Supply, db: AsyncSession):
 
 @router.get("/supplies")
 async def get_all_supplies(
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(verify_token)
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get all supplies with full details"""
+    """Get all supplies with full details - Public endpoint, no authentication required"""
     try:
         result = await db.execute(select(Supply))
         supplies = result.scalars().all()

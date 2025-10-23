@@ -24,7 +24,8 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    access_token = create_access_token({"sub": user.email})
+    # Include user_id in JWT token for authentication
+    access_token = create_access_token({"sub": user.email, "user_id": user.id})
     
     # Return token AND user data
     return {
