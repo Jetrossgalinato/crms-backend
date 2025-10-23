@@ -106,11 +106,11 @@ class BorrowingResponse(BaseModel):
 
 @router.get("/equipment", response_model=List[EquipmentResponse])
 async def get_equipment_list(
-    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get all equipment with facility names and availability status
+    Public endpoint - no authentication required
     """
     # Get all equipment
     result = await db.execute(select(Equipment))
