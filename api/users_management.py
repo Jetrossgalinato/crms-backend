@@ -71,74 +71,91 @@ async def get_users(
     Retrieve paginated list of users with optional filtering.
     
     Excludes the current authenticated user from results.
-    Only returns users where is_intern IS NULL AND is_supervisor IS NULL.
+    Shows ALL users from users table, with optional account_requests data.
     Filters can be applied for department and role.
     """
     try:
         # Get current user's ID from JWT token
         current_user_id = current_user["user_id"]
         
-        # Build base query - get AccountRequests with User email
-        # Filter for regular users (not interns or supervisors)
+        # Build base query - get ALL Users with optional AccountRequest data
+        # Use LEFT JOIN so users without account_requests are still included
         # ALWAYS exclude current user
-        # Note: is_intern and is_supervisor can be NULL or False (both mean NOT intern/supervisor)
         query = (
-            select(AccountRequest, User.email)
-            .join(User, AccountRequest.user_id == User.id)
-            .where(
-                and_(
+            select(
+                User.id,
+                User.email,
+                User.first_name,
+                User.last_name,
+                User.department,
+                User.phone_number,
+                User.acc_role,
+                AccountRequest.approved_acc_role,
+                AccountRequest.is_intern,
+                AccountRequest.is_supervisor
+            )
+            .outerjoin(AccountRequest, User.id == AccountRequest.user_id)
+            .where(User.id != current_user_id)  # Exclude current user
+        )
+        
+        # Filter out interns and supervisors (if they have account_request)
+        # Keep users who don't have account_request at all
+        query = query.where(
+            or_(
+                AccountRequest.id.is_(None),  # No account_request (include)
+                and_(  # Has account_request but not intern/supervisor
                     or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
-                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False),
-                    AccountRequest.user_id != current_user_id  # Exclude current user
+                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False)
                 )
             )
         )
         
         # Apply additional exclusion if provided
         if exclude_user_id and exclude_user_id != current_user_id:
-            query = query.where(AccountRequest.user_id != exclude_user_id)
+            query = query.where(User.id != exclude_user_id)
         
         # Apply department filter (case-insensitive partial match)
         if department:
-            query = query.where(
-                AccountRequest.department.ilike(f"%{department}%")
-            )
+            query = query.where(User.department.ilike(f"%{department}%"))
         
-        # Apply role filter (case-insensitive partial match on both acc_role and approved_acc_role)
+        # Apply role filter (check both User.acc_role and AccountRequest.approved_acc_role)
         if role:
             query = query.where(
                 or_(
-                    AccountRequest.acc_role.ilike(f"%{role}%"),
+                    User.acc_role.ilike(f"%{role}%"),
                     AccountRequest.approved_acc_role.ilike(f"%{role}%")
                 )
             )
         
         # Get total count - use same filters as main query
         count_query = (
-            select(func.count(AccountRequest.id))
-            .join(User, AccountRequest.user_id == User.id)
-            .where(
-                and_(
+            select(func.count(User.id))
+            .outerjoin(AccountRequest, User.id == AccountRequest.user_id)
+            .where(User.id != current_user_id)  # Exclude current user
+        )
+        
+        # Apply same filters to count
+        count_query = count_query.where(
+            or_(
+                AccountRequest.id.is_(None),  # No account_request
+                and_(  # Has account_request but not intern/supervisor
                     or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
-                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False),
-                    AccountRequest.user_id != current_user_id  # Exclude current user
+                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False)
                 )
             )
         )
         
         # Apply additional exclusion if provided
         if exclude_user_id and exclude_user_id != current_user_id:
-            count_query = count_query.where(AccountRequest.user_id != exclude_user_id)
+            count_query = count_query.where(User.id != exclude_user_id)
         
-        # Apply same filters to count
         if department:
-            count_query = count_query.where(
-                AccountRequest.department.ilike(f"%{department}%")
-            )
+            count_query = count_query.where(User.department.ilike(f"%{department}%"))
+        
         if role:
             count_query = count_query.where(
                 or_(
-                    AccountRequest.acc_role.ilike(f"%{role}%"),
+                    User.acc_role.ilike(f"%{role}%"),
                     AccountRequest.approved_acc_role.ilike(f"%{role}%")
                 )
             )
@@ -153,8 +170,8 @@ async def get_users(
         # Get paginated results with proper sorting
         query = (
             query.order_by(
-                AccountRequest.first_name.asc(),
-                AccountRequest.last_name.asc(),
+                User.first_name.asc(),
+                User.last_name.asc(),
                 User.email.asc()
             )
             .limit(limit)
@@ -166,16 +183,16 @@ async def get_users(
         
         # Format response
         users = []
-        for account_request, email in rows:
+        for row in rows:
             users.append({
-                "id": account_request.id,
-                "first_name": account_request.first_name,
-                "last_name": account_request.last_name,
-                "department": account_request.department,
-                "phone_number": account_request.phone_number,
-                "acc_role": account_request.acc_role,
-                "approved_acc_role": account_request.approved_acc_role,
-                "email": email
+                "id": row.id,
+                "first_name": row.first_name,
+                "last_name": row.last_name,
+                "department": row.department,
+                "phone_number": row.phone_number,
+                "acc_role": row.acc_role,
+                "approved_acc_role": row.approved_acc_role,
+                "email": row.email
             })
         
         return {

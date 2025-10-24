@@ -54,15 +54,23 @@ async def get_sidebar_counts(
         supplies_result = await db.execute(select(func.count(Supply.supply_id)))
         supplies = supplies_result.scalar() or 0
         
-        # Users count - Count AccountRequest entries (excluding current user, interns, and supervisors)
+        # Users count - Count ALL User entries (excluding current user, interns, and supervisors)
         # This matches the logic in GET /api/users endpoint
+        # Uses LEFT JOIN to include users without account_requests
         # Note: is_intern and is_supervisor can be NULL or False (both mean NOT intern/supervisor)
         users_result = await db.execute(
-            select(func.count(AccountRequest.id)).where(
+            select(func.count(User.id))
+            .outerjoin(AccountRequest, User.id == AccountRequest.user_id)
+            .where(
                 and_(
-                    or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
-                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False),
-                    AccountRequest.user_id != current_user_id  # ✅ Exclude current user
+                    User.id != current_user_id,  # ✅ Exclude current user
+                    or_(
+                        AccountRequest.id.is_(None),  # No account_request (include)
+                        and_(  # Has account_request but not intern/supervisor
+                            or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
+                            or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False)
+                        )
+                    )
                 )
             )
         )
