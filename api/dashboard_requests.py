@@ -59,6 +59,100 @@ class ConfirmDoneRequest(BaseModel):
 class DismissDoneRequest(BaseModel):
     notification_id: int
 
+# ==================== PENDING NOTIFICATIONS ENDPOINT ====================
+
+@router.get("/requests/pending-notifications")
+async def get_pending_notifications(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(verify_token)
+):
+    """
+    Get all pending requests (borrowing, booking, acquiring) for notification purposes
+    Returns a unified list of all pending requests across all types
+    """
+    try:
+        notifications = []
+        
+        # Get pending borrowing requests
+        borrowing_query = (
+            select(Borrowing, Equipment, User)
+            .join(Equipment, Borrowing.borrowed_item == Equipment.id)
+            .join(User, Borrowing.borrowers_id == User.id)
+            .where(Borrowing.request_status == "Pending")
+            .order_by(Borrowing.created_at.desc())
+        )
+        borrowing_result = await db.execute(borrowing_query)
+        borrowings = borrowing_result.all()
+        
+        for borrowing, equipment, user in borrowings:
+            notifications.append({
+                "id": borrowing.id,
+                "request_type": "borrowing",
+                "request_id": borrowing.id,
+                "requester_name": f"{user.first_name} {user.last_name}",
+                "item_name": equipment.name,
+                "status": "pending",
+                "message": "New borrowing request submitted",
+                "created_at": borrowing.created_at.isoformat() if borrowing.created_at else None,
+                "purpose": borrowing.purpose
+            })
+        
+        # Get pending booking requests
+        booking_query = (
+            select(Booking, Facility, User)
+            .join(Facility, Booking.facility_id == Facility.facility_id)
+            .join(User, Booking.bookers_id == User.id)
+            .where(Booking.status == "Pending")
+            .order_by(Booking.created_at.desc())
+        )
+        booking_result = await db.execute(booking_query)
+        bookings = booking_result.all()
+        
+        for booking, facility, user in bookings:
+            notifications.append({
+                "id": booking.id,
+                "request_type": "booking",
+                "request_id": booking.id,
+                "requester_name": f"{user.first_name} {user.last_name}",
+                "item_name": facility.facility_name,
+                "status": "pending",
+                "message": "New booking request submitted",
+                "created_at": booking.created_at.isoformat() if booking.created_at else None,
+                "purpose": booking.purpose
+            })
+        
+        # Get pending acquiring requests
+        acquiring_query = (
+            select(Acquiring, Supply, User)
+            .join(Supply, Acquiring.supply_id == Supply.supply_id)
+            .join(User, Acquiring.acquirers_id == User.id)
+            .where(Acquiring.status == "Pending")
+            .order_by(Acquiring.created_at.desc())
+        )
+        acquiring_result = await db.execute(acquiring_query)
+        acquirings = acquiring_result.all()
+        
+        for acquiring, supply, user in acquirings:
+            notifications.append({
+                "id": acquiring.id,
+                "request_type": "acquiring",
+                "request_id": acquiring.id,
+                "requester_name": f"{user.first_name} {user.last_name}",
+                "item_name": supply.supply_name,
+                "status": "pending",
+                "message": "New supply request submitted",
+                "created_at": acquiring.created_at.isoformat() if acquiring.created_at else None,
+                "purpose": acquiring.purpose or None
+            })
+        
+        # Sort all notifications by created_at (most recent first)
+        notifications.sort(key=lambda x: x["created_at"] or "", reverse=True)
+        
+        return notifications
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching pending notifications: {str(e)}")
+
 # ==================== BORROWING REQUESTS ENDPOINTS ====================
 
 @router.get("/borrowing/requests")
