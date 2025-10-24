@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
-from database import get_db, Equipment, Facility, Supply, Borrowing, Booking, Acquiring, AccountRequest, User
+from sqlalchemy import select, func, and_, or_
+from database import get_db, Equipment, Facility, Supply, Borrowing, Booking, Acquiring, AccountRequest, User, EquipmentLog, FacilityLog, SupplyLog
 from jose import JWTError, jwt
 from api.auth_utils import SECRET_KEY, ALGORITHM
 from typing import Optional
@@ -9,7 +9,7 @@ from typing import Optional
 router = APIRouter()
 
 async def verify_token(authorization: Optional[str] = Header(None)):
-    """Verify JWT token from Authorization header"""
+    """Verify JWT token from Authorization header and extract user info"""
     if not authorization:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
@@ -23,9 +23,10 @@ async def verify_token(authorization: Optional[str] = Header(None)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
-        if email is None:
+        user_id: int = payload.get("user_id")
+        if email is None or user_id is None:
             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
-        return {"email": email}
+        return {"email": email, "user_id": user_id}
     except JWTError:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -38,6 +39,9 @@ async def get_sidebar_counts(
     Get all sidebar counts in a single optimized request
     """
     try:
+        # Get current user's ID from JWT token
+        current_user_id = current_user["user_id"]
+        
         # Equipment count
         equipments_result = await db.execute(select(func.count(Equipment.id)))
         equipments = equipments_result.scalar() or 0
@@ -50,8 +54,26 @@ async def get_sidebar_counts(
         supplies_result = await db.execute(select(func.count(Supply.supply_id)))
         supplies = supplies_result.scalar() or 0
         
-        # Users count
-        users_result = await db.execute(select(func.count(User.id)))
+        # Users count - Count ALL User entries (excluding current user, interns, and supervisors)
+        # This matches the logic in GET /api/users endpoint
+        # Uses LEFT JOIN to include users without account_requests
+        # Note: is_intern and is_supervisor can be NULL or False (both mean NOT intern/supervisor)
+        users_result = await db.execute(
+            select(func.count(User.id))
+            .outerjoin(AccountRequest, User.id == AccountRequest.user_id)
+            .where(
+                and_(
+                    User.id != current_user_id,  # ✅ Exclude current user
+                    or_(
+                        AccountRequest.id.is_(None),  # No account_request (include)
+                        and_(  # Has account_request but not intern/supervisor
+                            or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
+                            or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False)
+                        )
+                    )
+                )
+            )
+        )
         users = users_result.scalar() or 0
         
         # Borrowing requests count
@@ -69,31 +91,26 @@ async def get_sidebar_counts(
         # Total requests (sum of all request types)
         requests = borrowing_count + booking_count + acquiring_count
         
-        # Account requests count (where is_intern and is_supervisor are both null)
+        # Account requests count (where is_intern and is_supervisor are both null or false)
         account_requests_result = await db.execute(
             select(func.count(AccountRequest.id)).where(
                 and_(
-                    AccountRequest.is_intern.is_(None),
-                    AccountRequest.is_supervisor.is_(None)
+                    or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
+                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False)
                 )
             )
         )
         account_requests = account_requests_result.scalar() or 0
         
-        # Log counts - Note: These tables don't exist in database.py yet
-        # For now, return 0. Add these models to database.py to get actual counts
-        equipment_logs = 0
-        facility_logs = 0
-        supply_logs = 0
+        # Log counts - Get total counts from log tables
+        equipment_logs_result = await db.execute(select(func.count(EquipmentLog.id)))
+        equipment_logs = equipment_logs_result.scalar() or 0
         
-        # If you add EquipmentLog, FacilityLog, SupplyLog models to database.py, uncomment:
-        # from database import EquipmentLog, FacilityLog, SupplyLog
-        # equipment_logs_result = await db.execute(select(func.count(EquipmentLog.id)))
-        # equipment_logs = equipment_logs_result.scalar() or 0
-        # facility_logs_result = await db.execute(select(func.count(FacilityLog.id)))
-        # facility_logs = facility_logs_result.scalar() or 0
-        # supply_logs_result = await db.execute(select(func.count(SupplyLog.id)))
-        # supply_logs = supply_logs_result.scalar() or 0
+        facility_logs_result = await db.execute(select(func.count(FacilityLog.id)))
+        facility_logs = facility_logs_result.scalar() or 0
+        
+        supply_logs_result = await db.execute(select(func.count(SupplyLog.id)))
+        supply_logs = supply_logs_result.scalar() or 0
         
         return {
             "equipments": equipments,

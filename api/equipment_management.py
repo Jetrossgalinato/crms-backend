@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
-from database import get_db, Equipment, Facility, User
+from sqlalchemy import select, delete, func
+from database import get_db, Equipment, Facility, User, EquipmentLog
 from pydantic import BaseModel
 from jose import JWTError, jwt
 from api.auth_utils import SECRET_KEY, ALGORITHM
@@ -10,6 +10,7 @@ from datetime import datetime
 import os
 import shutil
 import uuid
+import math
 
 router = APIRouter()
 
@@ -506,3 +507,79 @@ async def create_equipment_log(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating equipment log: {str(e)}")
+
+@router.get("/equipment/logs")
+async def get_equipment_logs(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(verify_token)
+):
+    """
+    Get paginated equipment logs for monitoring page
+    Returns logs with formatted log_message field for frontend display
+    """
+    try:
+        # Get total count
+        count_result = await db.execute(select(func.count(EquipmentLog.id)))
+        total_count = count_result.scalar() or 0
+        
+        # Calculate pagination
+        total_pages = math.ceil(total_count / limit) if total_count > 0 else 1
+        offset = (page - 1) * limit
+        
+        # Get logs with pagination
+        query = (
+            select(EquipmentLog)
+            .order_by(EquipmentLog.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        
+        result = await db.execute(query)
+        logs = result.scalars().all()
+        
+        # Get user information for better log messages
+        user_result = await db.execute(
+            select(User).where(User.email == current_user["email"])
+        )
+        user = user_result.scalar_one_or_none()
+        
+        # Format response with log_message field
+        logs_data = []
+        for log in logs:
+            # Get equipment name if equipment_id exists
+            equipment_name = "Unknown Equipment"
+            if log.equipment_id:
+                equipment_result = await db.execute(
+                    select(Equipment).where(Equipment.id == log.equipment_id)
+                )
+                equipment = equipment_result.scalar_one_or_none()
+                if equipment:
+                    equipment_name = equipment.name
+            
+            # Construct log_message based on action and details
+            # Format: "Admin {user} {action} for {equipment_name} - {details}"
+            user_identifier = log.user_email.split("@")[0] if log.user_email else "User"
+            
+            if log.details:
+                log_message = f"Admin {user_identifier} {log.action} for {equipment_name} - {log.details}"
+            else:
+                log_message = f"Admin {user_identifier} {log.action} for {equipment_name}"
+            
+            logs_data.append({
+                "id": log.id,
+                "log_message": log_message,
+                "created_at": log.created_at.isoformat() if log.created_at else None
+            })
+        
+        return {
+            "logs": logs_data,
+            "total_count": total_count,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching equipment logs: {str(e)}")

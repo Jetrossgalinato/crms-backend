@@ -35,7 +35,7 @@ class AcquiringRequest(BaseModel):
     acquirers_id: int
     supply_id: int
     quantity: int
-    purpose: str = None
+    purpose: Optional[str] = None
 
 @router.post("/acquiring", status_code=201)
 async def create_acquiring_request(
