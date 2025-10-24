@@ -81,13 +81,14 @@ async def get_users(
         # Build base query - get AccountRequests with User email
         # Filter for regular users (not interns or supervisors)
         # ALWAYS exclude current user
+        # Note: is_intern and is_supervisor can be NULL or False (both mean NOT intern/supervisor)
         query = (
             select(AccountRequest, User.email)
             .join(User, AccountRequest.user_id == User.id)
             .where(
                 and_(
-                    AccountRequest.is_intern.is_(None),
-                    AccountRequest.is_supervisor.is_(None),
+                    or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
+                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False),
                     AccountRequest.user_id != current_user_id  # Exclude current user
                 )
             )
@@ -118,8 +119,8 @@ async def get_users(
             .join(User, AccountRequest.user_id == User.id)
             .where(
                 and_(
-                    AccountRequest.is_intern.is_(None),
-                    AccountRequest.is_supervisor.is_(None),
+                    or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
+                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False),
                     AccountRequest.user_id != current_user_id  # Exclude current user
                 )
             )

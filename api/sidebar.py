@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, or_
 from database import get_db, Equipment, Facility, Supply, Borrowing, Booking, Acquiring, AccountRequest, User, EquipmentLog, FacilityLog, SupplyLog
 from jose import JWTError, jwt
 from api.auth_utils import SECRET_KEY, ALGORITHM
@@ -56,11 +56,12 @@ async def get_sidebar_counts(
         
         # Users count - Count AccountRequest entries (excluding current user, interns, and supervisors)
         # This matches the logic in GET /api/users endpoint
+        # Note: is_intern and is_supervisor can be NULL or False (both mean NOT intern/supervisor)
         users_result = await db.execute(
             select(func.count(AccountRequest.id)).where(
                 and_(
-                    AccountRequest.is_intern.is_(None),
-                    AccountRequest.is_supervisor.is_(None),
+                    or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
+                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False),
                     AccountRequest.user_id != current_user_id  # ✅ Exclude current user
                 )
             )
@@ -82,12 +83,12 @@ async def get_sidebar_counts(
         # Total requests (sum of all request types)
         requests = borrowing_count + booking_count + acquiring_count
         
-        # Account requests count (where is_intern and is_supervisor are both null)
+        # Account requests count (where is_intern and is_supervisor are both null or false)
         account_requests_result = await db.execute(
             select(func.count(AccountRequest.id)).where(
                 and_(
-                    AccountRequest.is_intern.is_(None),
-                    AccountRequest.is_supervisor.is_(None)
+                    or_(AccountRequest.is_intern.is_(None), AccountRequest.is_intern == False),
+                    or_(AccountRequest.is_supervisor.is_(None), AccountRequest.is_supervisor == False)
                 )
             )
         )
