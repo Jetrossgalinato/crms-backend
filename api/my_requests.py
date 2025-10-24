@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
-from database import get_db, Borrowing, Booking, Acquiring, Equipment, Facility, Supply, User, Notification
+from database import get_db, Borrowing, Booking, Acquiring, Equipment, Facility, Supply, User, Notification, ReturnNotification, DoneNotification
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -245,7 +245,7 @@ async def mark_borrowing_returned(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
-    """Mark borrowing items as returned - creates notification for admin"""
+    """Mark borrowing items as returned - creates return notification for admin"""
     try:
         # Validate receiver_name
         if not request.receiver_name or not request.receiver_name.strip():
@@ -269,17 +269,28 @@ async def mark_borrowing_returned(
                     detail=f"Borrowing ID {borrowing_id} not found or doesn't belong to you"
                 )
         
-        # Create notifications for admin (user_id 1 or get all admins)
+        # Create return notifications for admin review
         for borrowing_id in request.borrowing_ids:
-            notification = Notification(
-                user_id=1,  # Admin user ID - adjust as needed
-                title="Borrowing Return Request",
-                message=f"User {current_user['email']} has returned items. Receiver: {request.receiver_name}. Borrowing ID: {borrowing_id}",
+            # Create ReturnNotification
+            return_notif = ReturnNotification(
+                borrowing_id=borrowing_id,
+                receiver_name=request.receiver_name.strip(),
+                status="pending_confirmation",
+                message=f"Equipment returned by {current_user['email']}",
+                created_at=datetime.utcnow()
+            )
+            db.add(return_notif)
+            
+            # Also create admin notification
+            admin_notification = Notification(
+                user_id=1,  # Admin user ID
+                title="Equipment Return Notification",
+                message=f"User {current_user['email']} reported equipment return. Receiver: {request.receiver_name}",
                 type="info",
                 is_read=False,
                 created_at=datetime.utcnow()
             )
-            db.add(notification)
+            db.add(admin_notification)
         
         await db.commit()
         
@@ -301,7 +312,7 @@ async def mark_booking_done(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
-    """Mark booking as done - creates notification for admin"""
+    """Mark booking as done - creates done notification for admin"""
     try:
         # Get user ID
         user_id = await get_user_id_from_email(current_user["email"], db)
@@ -321,18 +332,29 @@ async def mark_booking_done(
                     detail=f"Booking ID {booking_id} not found or doesn't belong to you"
                 )
         
-        # Create notifications for admin
+        # Create done notifications for admin review
         notes = request.completion_notes or "No notes provided"
         for booking_id in request.booking_ids:
-            notification = Notification(
+            # Create DoneNotification
+            done_notif = DoneNotification(
+                booking_id=booking_id,
+                completion_notes=notes,
+                status="pending_confirmation",
+                message=f"Booking completed by {current_user['email']}",
+                created_at=datetime.utcnow()
+            )
+            db.add(done_notif)
+            
+            # Also create admin notification
+            admin_notification = Notification(
                 user_id=1,  # Admin user ID
                 title="Booking Completion Notification",
-                message=f"User {current_user['email']} completed booking. Notes: {notes}. Booking ID: {booking_id}",
+                message=f"User {current_user['email']} marked booking as done. Notes: {notes}",
                 type="info",
                 is_read=False,
                 created_at=datetime.utcnow()
             )
-            db.add(notification)
+            db.add(admin_notification)
         
         await db.commit()
         

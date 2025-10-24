@@ -156,4 +156,49 @@ class Acquiring(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)
 
+class ReturnNotification(Base):
+    __tablename__ = "return_notifications"
+    id = Column(Integer, primary_key=True, index=True)
+    borrowing_id = Column(Integer, ForeignKey("borrowing.id", ondelete="CASCADE"), nullable=False)
+    receiver_name = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending_confirmation")  # pending_confirmation, confirmed, rejected
+    message = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+class DoneNotification(Base):
+    __tablename__ = "done_notifications"
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False)
+    completion_notes = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="pending_confirmation")  # pending_confirmation, confirmed, dismissed
+    message = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+class EquipmentLog(Base):
+    __tablename__ = "equipment_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    equipment_id = Column(Integer, ForeignKey("equipments.id"), nullable=True)
+    action = Column(String, nullable=False)
+    details = Column(String, nullable=True)
+    user_email = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+class FacilityLog(Base):
+    __tablename__ = "facility_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    facility_id = Column(Integer, ForeignKey("facilities.facility_id"), nullable=True)
+    action = Column(String, nullable=False)
+    details = Column(String, nullable=True)
+    user_email = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+class SupplyLog(Base):
+    __tablename__ = "supply_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    supply_id = Column(Integer, ForeignKey("supplies.supply_id"), nullable=True)
+    action = Column(String, nullable=False)
+    details = Column(String, nullable=True)
+    user_email = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
 

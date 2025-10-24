@@ -20,6 +20,7 @@ from api.sidebar import router as sidebar_router
 from api.facilities_management import router as facilities_management_router
 from api.supplies_management import router as supplies_management_router
 from api.my_requests import router as my_requests_router
+from api.dashboard_requests import router as dashboard_requests_router
 from database import engine, Base
 import os
 
@@ -59,3 +60,4 @@ app.include_router(equipment_management_router)
 app.include_router(facilities_management_router, prefix="/api")
 app.include_router(supplies_management_router, prefix="/api")
 app.include_router(my_requests_router, prefix="/api")
+app.include_router(dashboard_requests_router, prefix="/api")
