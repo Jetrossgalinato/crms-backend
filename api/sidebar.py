@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
-from database import get_db, Equipment, Facility, Supply, Borrowing, Booking, Acquiring, AccountRequest, User
+from database import get_db, Equipment, Facility, Supply, Borrowing, Booking, Acquiring, AccountRequest, User, EquipmentLog, FacilityLog, SupplyLog
 from jose import JWTError, jwt
 from api.auth_utils import SECRET_KEY, ALGORITHM
 from typing import Optional
@@ -80,20 +80,15 @@ async def get_sidebar_counts(
         )
         account_requests = account_requests_result.scalar() or 0
         
-        # Log counts - Note: These tables don't exist in database.py yet
-        # For now, return 0. Add these models to database.py to get actual counts
-        equipment_logs = 0
-        facility_logs = 0
-        supply_logs = 0
+        # Log counts - Get total counts from log tables
+        equipment_logs_result = await db.execute(select(func.count(EquipmentLog.id)))
+        equipment_logs = equipment_logs_result.scalar() or 0
         
-        # If you add EquipmentLog, FacilityLog, SupplyLog models to database.py, uncomment:
-        # from database import EquipmentLog, FacilityLog, SupplyLog
-        # equipment_logs_result = await db.execute(select(func.count(EquipmentLog.id)))
-        # equipment_logs = equipment_logs_result.scalar() or 0
-        # facility_logs_result = await db.execute(select(func.count(FacilityLog.id)))
-        # facility_logs = facility_logs_result.scalar() or 0
-        # supply_logs_result = await db.execute(select(func.count(SupplyLog.id)))
-        # supply_logs = supply_logs_result.scalar() or 0
+        facility_logs_result = await db.execute(select(func.count(FacilityLog.id)))
+        facility_logs = facility_logs_result.scalar() or 0
+        
+        supply_logs_result = await db.execute(select(func.count(SupplyLog.id)))
+        supply_logs = supply_logs_result.scalar() or 0
         
         return {
             "equipments": equipments,
