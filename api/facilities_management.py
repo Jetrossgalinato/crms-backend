@@ -64,8 +64,9 @@ class BulkDeleteRequest(BaseModel):
     facility_ids: List[int]
 
 class FacilityLogCreate(BaseModel):
-    facility_id: int
-    action: str
+    log_message: str
+    facility_id: Optional[int] = None
+    action: Optional[str] = None
     details: Optional[str] = None
 
 # Ensure upload directory exists
@@ -470,37 +471,42 @@ async def create_facility_log(
 ):
     """
     Create a facility log entry
-    Note: This endpoint is ready but requires FacilityLog model to be added to database.py
     """
     try:
-        # TODO: Uncomment when FacilityLog model is added to database.py
-        # from database import FacilityLog
-        # 
-        # new_log = FacilityLog(
-        #     facility_id=log_data.facility_id,
-        #     action=log_data.action,
-        #     details=log_data.details,
-        #     user_email=current_user["email"],
-        #     created_at=datetime.utcnow()
-        # )
-        # 
-        # db.add(new_log)
-        # await db.commit()
-        # await db.refresh(new_log)
-        # 
-        # return {
-        #     "message": "Facility log created successfully",
-        #     "log_id": new_log.id
-        # }
+        # Determine action from log_message or use provided action
+        action = log_data.action or "action"
+        if log_data.log_message:
+            # Extract action from log message (first word usually)
+            action_words = log_data.log_message.lower().split()
+            if action_words:
+                if "added" in action_words or "created" in action_words:
+                    action = "created"
+                elif "updated" in action_words or "edited" in action_words:
+                    action = "updated"
+                elif "deleted" in action_words or "removed" in action_words:
+                    action = "deleted"
+                else:
+                    action = action_words[0]
         
-        # Temporary response until FacilityLog model is added
+        new_log = FacilityLog(
+            facility_id=log_data.facility_id,
+            action=action,
+            details=log_data.details or log_data.log_message,
+            user_email=current_user["email"],
+            created_at=datetime.utcnow()
+        )
+        
+        db.add(new_log)
+        await db.commit()
+        await db.refresh(new_log)
+        
         return {
-            "message": "Facility log endpoint ready (add FacilityLog model to database.py to enable)",
-            "facility_id": log_data.facility_id,
-            "action": log_data.action
+            "message": "Facility log created successfully",
+            "log_id": new_log.id
         }
     
     except Exception as e:
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error creating facility log: {str(e)}")
 
 @router.get("/facilities/logs")
