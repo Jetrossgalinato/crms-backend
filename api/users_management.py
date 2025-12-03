@@ -43,6 +43,14 @@ class UserBase(BaseModel):
     acc_role: str
     approved_acc_role: Optional[str] = None
 
+class UserUpdateRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    department: Optional[str] = None
+    phone_number: Optional[str] = None
+    acc_role: Optional[str] = None
+    approved_acc_role: Optional[str] = None
+
 class UserResponse(UserBase):
     id: int
     email: str
@@ -209,49 +217,63 @@ async def get_users(
 @router.patch("/users/{user_id}")
 async def update_user(
     user_id: int,
-    user_data: UserBase,
+    user_data: UserUpdateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
     """
     Update user information by ID.
+    Updates the User table (not AccountRequest).
     """
     try:
-        # Find account request
+        # Find user in User table
         result = await db.execute(
-            select(AccountRequest).where(AccountRequest.id == user_id)
+            select(User).where(User.id == user_id)
         )
-        account_request = result.scalar_one_or_none()
+        user = result.scalar_one_or_none()
         
-        if not account_request:
+        if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Update fields
-        account_request.first_name = user_data.first_name
-        account_request.last_name = user_data.last_name
-        account_request.department = user_data.department
-        account_request.phone_number = user_data.phone_number
-        account_request.acc_role = user_data.acc_role
-        account_request.approved_acc_role = user_data.approved_acc_role
+        # Update only provided fields in User table
+        if user_data.first_name is not None:
+            user.first_name = user_data.first_name
+        if user_data.last_name is not None:
+            user.last_name = user_data.last_name
+        if user_data.department is not None:
+            user.department = user_data.department
+        if user_data.phone_number is not None:
+            user.phone_number = user_data.phone_number
+        if user_data.acc_role is not None:
+            user.acc_role = user_data.acc_role
+        
+        # Also update AccountRequest if it exists (for approved_acc_role)
+        if user_data.approved_acc_role is not None:
+            account_request_result = await db.execute(
+                select(AccountRequest).where(AccountRequest.user_id == user_id)
+            )
+            account_request = account_request_result.scalar_one_or_none()
+            if account_request:
+                account_request.approved_acc_role = user_data.approved_acc_role
         
         await db.commit()
-        await db.refresh(account_request)
+        await db.refresh(user)
         
-        # Get user email
-        user_result = await db.execute(
-            select(User).where(User.id == account_request.user_id)
+        # Get approved_acc_role from AccountRequest if exists
+        account_request_result = await db.execute(
+            select(AccountRequest).where(AccountRequest.user_id == user_id)
         )
-        user = user_result.scalar_one_or_none()
+        account_request = account_request_result.scalar_one_or_none()
         
         return {
-            "id": account_request.id,
-            "first_name": account_request.first_name,
-            "last_name": account_request.last_name,
-            "department": account_request.department,
-            "phone_number": account_request.phone_number,
-            "acc_role": account_request.acc_role,
-            "approved_acc_role": account_request.approved_acc_role,
-            "email": user.email if user else ""
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "department": user.department,
+            "phone_number": user.phone_number,
+            "acc_role": user.acc_role,
+            "approved_acc_role": account_request.approved_acc_role if account_request else None,
+            "email": user.email
         }
     
     except HTTPException:
