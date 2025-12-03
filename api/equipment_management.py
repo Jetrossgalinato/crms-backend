@@ -446,34 +446,11 @@ async def create_equipment_log(
         # Get user information from token
         user_email = current_user["email"]
         
-        # Get user name from database
-        user_result = await db.execute(
-            select(User).where(User.email == user_email)
-        )
-        user = user_result.scalar_one_or_none()
-        user_name = f"{user.first_name} {user.last_name}" if user else user_email
-        
-        # Construct log message
-        if log_data.equipment_name:
-            log_message = f"{user_name} {log_data.action} equipment: {log_data.equipment_name}"
-            if log_data.details:
-                log_message += f" - {log_data.details}"
-        else:
-            log_message = f"{user_name} {log_data.action}"
-            if log_data.details:
-                log_message += f" - {log_data.details}"
-        
-        # For now, just return the log data since we don't have equipment_logs table in database.py
-        # You can add the EquipmentLog model to database.py and uncomment the code below
-        
-        """
-        from database import EquipmentLog
-        
+        # Create equipment log entry
         new_log = EquipmentLog(
-            log_message=log_message,
+            equipment_id=None,
             action=log_data.action,
-            equipment_name=log_data.equipment_name,
-            details=log_data.details,
+            details=f"{log_data.equipment_name}: {log_data.details}" if log_data.equipment_name and log_data.details else log_data.details or log_data.equipment_name or log_data.action,
             user_email=user_email,
             created_at=datetime.utcnow()
         )
@@ -483,29 +460,14 @@ async def create_equipment_log(
         await db.refresh(new_log)
         
         return {
-            "id": new_log.id,
-            "log_message": new_log.log_message,
-            "action": new_log.action,
-            "equipment_name": new_log.equipment_name,
-            "details": new_log.details,
-            "user_email": new_log.user_email,
-            "created_at": new_log.created_at.isoformat()
-        }
-        """
-        
-        # Temporary response until EquipmentLog model is added
-        return {
-            "id": 1,
-            "log_message": log_message,
-            "action": log_data.action,
-            "equipment_name": log_data.equipment_name,
-            "details": log_data.details,
-            "user_email": user_email,
-            "created_at": datetime.utcnow().isoformat()
+            "success": True,
+            "message": "Equipment action logged successfully",
+            "log_id": new_log.id
         }
     except HTTPException:
         raise
     except Exception as e:
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error creating equipment log: {str(e)}")
 
 @router.get("/equipment/logs")
@@ -549,7 +511,7 @@ async def get_equipment_logs(
         logs_data = []
         for log in logs:
             # Get equipment name if equipment_id exists
-            equipment_name = "Unknown Equipment"
+            equipment_name = "Equipment"
             if log.equipment_id:
                 equipment_result = await db.execute(
                     select(Equipment).where(Equipment.id == log.equipment_id)

@@ -64,8 +64,9 @@ class BulkDeleteRequest(BaseModel):
     facility_ids: List[int]
 
 class FacilityLogCreate(BaseModel):
-    facility_id: int
-    action: str
+    log_message: str
+    facility_id: Optional[int] = None
+    action: Optional[str] = None
     details: Optional[str] = None
 
 # Ensure upload directory exists
@@ -337,40 +338,6 @@ async def update_facility(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error updating facility: {str(e)}")
 
-@router.delete("/facilities/{facility_id}")
-async def delete_facility(
-    facility_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(verify_token)
-):
-    """Delete a single facility"""
-    try:
-        # Get facility
-        result = await db.execute(select(Facility).where(Facility.facility_id == facility_id))
-        facility = result.scalar_one_or_none()
-        
-        if not facility:
-            raise HTTPException(status_code=404, detail="Facility not found")
-        
-        # Delete image if exists
-        if facility.image_url:
-            image_path = facility.image_url.replace("/uploads/facility-images/", "")
-            file_path = os.path.join(UPLOAD_DIR, image_path)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        
-        # Delete facility
-        await db.delete(facility)
-        await db.commit()
-        
-        return {"message": "Facility deleted successfully"}
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error deleting facility: {str(e)}")
-
 @router.delete("/facilities/bulk-delete")
 @router.post("/facilities/bulk-delete")
 async def bulk_delete_facilities(
@@ -413,6 +380,40 @@ async def bulk_delete_facilities(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting facilities: {str(e)}")
+
+@router.delete("/facilities/{facility_id}")
+async def delete_facility(
+    facility_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(verify_token)
+):
+    """Delete a single facility"""
+    try:
+        # Get facility
+        result = await db.execute(select(Facility).where(Facility.facility_id == facility_id))
+        facility = result.scalar_one_or_none()
+        
+        if not facility:
+            raise HTTPException(status_code=404, detail="Facility not found")
+        
+        # Delete image if exists
+        if facility.image_url:
+            image_path = facility.image_url.replace("/uploads/facility-images/", "")
+            file_path = os.path.join(UPLOAD_DIR, image_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        # Delete facility
+        await db.delete(facility)
+        await db.commit()
+        
+        return {"message": "Facility deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error deleting facility: {str(e)}")
 
 @router.post("/facilities/bulk-import")
 async def bulk_import_facilities(
@@ -470,37 +471,42 @@ async def create_facility_log(
 ):
     """
     Create a facility log entry
-    Note: This endpoint is ready but requires FacilityLog model to be added to database.py
     """
     try:
-        # TODO: Uncomment when FacilityLog model is added to database.py
-        # from database import FacilityLog
-        # 
-        # new_log = FacilityLog(
-        #     facility_id=log_data.facility_id,
-        #     action=log_data.action,
-        #     details=log_data.details,
-        #     user_email=current_user["email"],
-        #     created_at=datetime.utcnow()
-        # )
-        # 
-        # db.add(new_log)
-        # await db.commit()
-        # await db.refresh(new_log)
-        # 
-        # return {
-        #     "message": "Facility log created successfully",
-        #     "log_id": new_log.id
-        # }
+        # Determine action from log_message or use provided action
+        action = log_data.action or "action"
+        if log_data.log_message:
+            # Extract action from log message (first word usually)
+            action_words = log_data.log_message.lower().split()
+            if action_words:
+                if "added" in action_words or "created" in action_words:
+                    action = "created"
+                elif "updated" in action_words or "edited" in action_words:
+                    action = "updated"
+                elif "deleted" in action_words or "removed" in action_words:
+                    action = "deleted"
+                else:
+                    action = action_words[0]
         
-        # Temporary response until FacilityLog model is added
+        new_log = FacilityLog(
+            facility_id=log_data.facility_id,
+            action=action,
+            details=log_data.details or log_data.log_message,
+            user_email=current_user["email"],
+            created_at=datetime.utcnow()
+        )
+        
+        db.add(new_log)
+        await db.commit()
+        await db.refresh(new_log)
+        
         return {
-            "message": "Facility log endpoint ready (add FacilityLog model to database.py to enable)",
-            "facility_id": log_data.facility_id,
-            "action": log_data.action
+            "message": "Facility log created successfully",
+            "log_id": new_log.id
         }
     
     except Exception as e:
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error creating facility log: {str(e)}")
 
 @router.get("/facilities/logs")
@@ -538,7 +544,7 @@ async def get_facility_logs(
         logs_data = []
         for log in logs:
             # Get facility name if facility_id exists
-            facility_name = "Unknown Facility"
+            facility_name = "Facility"
             if log.facility_id:
                 facility_result = await db.execute(
                     select(Facility).where(Facility.facility_id == log.facility_id)
@@ -548,10 +554,14 @@ async def get_facility_logs(
                     facility_name = facility.facility_name
             
             # Construct log_message based on action and details
-            # Format: "Admin {user} {action} for {facility_name} - {details}"
             user_identifier = log.user_email.split("@")[0] if log.user_email else "User"
             
-            if log.details:
+            # If details already contains a complete message, use it directly
+            # Otherwise format it with action and facility name
+            if log.details and ("created" in log.details.lower() or "updated" in log.details.lower() or "deleted" in log.details.lower()):
+                # Details already contains full message like "created facility 'Cl1'"
+                log_message = f"Admin {user_identifier} {log.details}"
+            elif log.details:
                 log_message = f"Admin {user_identifier} {log.action} for {facility_name} - {log.details}"
             else:
                 log_message = f"Admin {user_identifier} {log.action} for {facility_name}"

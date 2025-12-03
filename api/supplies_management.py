@@ -71,6 +71,7 @@ class BulkImportRequest(BaseModel):
 class LogActionRequest(BaseModel):
     action: str
     supply_id: Optional[int] = None
+    supply_name: Optional[str] = None
     details: Optional[str] = None
     
     class Config:
@@ -308,13 +309,14 @@ async def update_supply(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error updating supply: {str(e)}")
 
-@router.delete("/supplies")
+@router.delete("/supplies/bulk-delete")
+@router.post("/supplies/bulk-delete")
 async def delete_supplies(
     request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
-    """Delete multiple supply items"""
+    """Delete multiple supply items (supports both DELETE and POST methods)"""
     try:
         if not request.supply_ids:
             raise HTTPException(
@@ -438,40 +440,33 @@ async def log_supply_action(
     """
     Log supply management actions (create, update, delete)
     Supports both /supply-logs and /supplies/log-action endpoints
-    Note: This endpoint is ready but requires SupplyLog model to be added to database.py
     """
     try:
-        # Validate action type
-        valid_actions = ["create", "update", "delete"]
-        if log_data.action not in valid_actions:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid action type. Must be 'create', 'update', or 'delete'"
-            )
+        # Construct details with supply name if provided
+        log_details = log_data.details
+        if log_data.supply_name and log_data.details:
+            # Prepend supply name to details for better log messages
+            log_details = f"{log_data.supply_name}: {log_data.details}"
+        elif log_data.supply_name:
+            log_details = log_data.supply_name
         
-        # TODO: Uncomment when SupplyLog model is added to database.py
-        # from database import SupplyLog
-        # 
-        # new_log = SupplyLog(
-        #     supply_id=log_data.supply_id,
-        #     action=log_data.action,
-        #     details=log_data.details,
-        #     user_email=current_user["email"],
-        #     created_at=datetime.utcnow()
-        # )
-        # 
-        # db.add(new_log)
-        # await db.commit()
-        # 
-        # return {
-        #     "success": True,
-        #     "message": "Action logged successfully"
-        # }
+        # Create supply log entry
+        new_log = SupplyLog(
+            supply_id=log_data.supply_id,
+            action=log_data.action,
+            details=log_details,
+            user_email=current_user["email"],
+            created_at=datetime.utcnow()
+        )
         
-        # Temporary response until SupplyLog model is added
+        db.add(new_log)
+        await db.commit()
+        await db.refresh(new_log)
+        
         return {
             "success": True,
-            "message": "Action logged successfully (add SupplyLog model to database.py to enable)"
+            "message": "Action logged successfully",
+            "log_id": new_log.id
         }
     
     except HTTPException:
@@ -514,7 +509,7 @@ async def get_supply_logs(
         logs_data = []
         for log in logs:
             # Get supply name if supply_id exists
-            supply_name = "Unknown Supply"
+            supply_name = "Supply"
             if log.supply_id:
                 supply_result = await db.execute(
                     select(Supply).where(Supply.supply_id == log.supply_id)
@@ -524,11 +519,20 @@ async def get_supply_logs(
                     supply_name = supply.supply_name
             
             # Construct log_message based on action and details
-            # Format: "Admin {user} {action} for {supply_name} - {details}"
             user_identifier = log.user_email.split("@")[0] if log.user_email else "User"
             
+            # Try to extract supply name from details if it contains it
+            # Details format is often: "supply_name: Category: X, Quantity: Y"
             if log.details:
-                log_message = f"Admin {user_identifier} {log.action} for {supply_name} - {log.details}"
+                # Check if details starts with a supply name (before the colon)
+                details_parts = log.details.split(": ", 1)
+                if len(details_parts) > 1 and "Category" not in details_parts[0]:
+                    # First part is likely the supply name
+                    actual_supply_name = details_parts[0]
+                    remaining_details = details_parts[1]
+                    log_message = f"Admin {user_identifier} {log.action} for {actual_supply_name} - {remaining_details}"
+                else:
+                    log_message = f"Admin {user_identifier} {log.action} for {supply_name} - {log.details}"
             else:
                 log_message = f"Admin {user_identifier} {log.action} for {supply_name}"
             
