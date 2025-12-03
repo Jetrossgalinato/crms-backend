@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from jose import JWTError, jwt
-from api.auth_utils import SECRET_KEY, ALGORITHM
+from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 import os
 import uuid
 import math
@@ -152,7 +152,7 @@ async def create_facility_json(
             description=facility_data.description,
             remarks=facility_data.remarks,
             status=facility_data.status,
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         
         db.add(new_facility)
@@ -218,7 +218,7 @@ async def create_facility_with_image(
             remarks=remarks,
             status=status,
             image_url=image_url,
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         
         db.add(new_facility)
@@ -308,7 +308,7 @@ async def update_facility(
         if status is not None:
             facility.status = status
         
-        facility.updated_at = datetime.utcnow()
+        facility.updated_at = get_philippine_time()
         
         await db.commit()
         await db.refresh(facility)
@@ -433,7 +433,7 @@ async def bulk_import_facilities(
                 capacity=facility_data.capacity,
                 description=facility_data.description,
                 status=facility_data.status,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             
             db.add(new_facility)
@@ -493,7 +493,7 @@ async def create_facility_log(
             action=action,
             details=log_data.details or log_data.log_message,
             user_email=current_user["email"],
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         
         db.add(new_log)

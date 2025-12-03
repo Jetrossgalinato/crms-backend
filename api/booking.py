@@ -5,7 +5,7 @@ from database import get_db, Booking, User, Facility
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
-from api.auth_utils import get_current_user
+from api.auth_utils import get_current_user, get_philippine_time
 
 router = APIRouter()
 
@@ -124,7 +124,7 @@ async def create_booking(
             return_date=return_date.strftime("%Y-%m-%d") if return_date else None,
             status="Pending",
             request_type="Facility",
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         
         db.add(new_booking)

@@ -4,7 +4,7 @@ from sqlalchemy import select, delete, func
 from database import get_db, Equipment, Facility, User, EquipmentLog
 from pydantic import BaseModel
 from jose import JWTError, jwt
-from api.auth_utils import SECRET_KEY, ALGORITHM
+from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 from typing import Optional, List
 from datetime import datetime
 import os
@@ -200,8 +200,8 @@ async def create_equipment(
             facility_id=equipment.facility_id,
             remarks=equipment.remarks,
             image=equipment.image,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=get_philippine_time(),
+            updated_at=get_philippine_time()
         )
         
         db.add(new_equipment)
@@ -249,7 +249,7 @@ async def update_equipment(
         for field, value in update_data.items():
             setattr(equipment, field, value)
         
-        equipment.updated_at = datetime.utcnow()
+        equipment.updated_at = get_philippine_time()
         
         await db.commit()
         await db.refresh(equipment)
@@ -392,8 +392,8 @@ async def bulk_import_equipments(
                     facility_id=eq_data.facility_id,
                     remarks=eq_data.remarks,
                     image=eq_data.image,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    created_at=get_philippine_time(),
+                    updated_at=get_philippine_time()
                 )
                 
                 db.add(new_equipment)
@@ -452,7 +452,7 @@ async def create_equipment_log(
             action=log_data.action,
             details=f"{log_data.equipment_name}: {log_data.details}" if log_data.equipment_name and log_data.details else log_data.details or log_data.equipment_name or log_data.action,
             user_email=user_email,
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         
         db.add(new_log)
