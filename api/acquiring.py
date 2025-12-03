@@ -5,7 +5,7 @@ from database import get_db, Acquiring, Supply, User
 from datetime import datetime
 from pydantic import BaseModel
 from jose import JWTError, jwt
-from api.auth_utils import SECRET_KEY, ALGORITHM
+from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 from typing import Optional
 
 router = APIRouter()
@@ -83,7 +83,7 @@ async def create_acquiring_request(
             quantity=request.quantity,
             purpose=request.purpose,
             status="Pending",
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         
         db.add(new_request)

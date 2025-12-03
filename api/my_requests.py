@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from jose import JWTError, jwt
-from api.auth_utils import SECRET_KEY, ALGORITHM
+from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 import math
 
 router = APIRouter()
@@ -277,7 +277,7 @@ async def mark_borrowing_returned(
                 receiver_name=request.receiver_name.strip(),
                 status="pending_confirmation",
                 message=f"Equipment returned by {current_user['email']}",
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(return_notif)
             
@@ -288,7 +288,7 @@ async def mark_borrowing_returned(
                 message=f"User {current_user['email']} reported equipment return. Receiver: {request.receiver_name}",
                 type="info",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(admin_notification)
         
@@ -341,7 +341,7 @@ async def mark_booking_done(
                 completion_notes=notes,
                 status="pending_confirmation",
                 message=f"Booking completed by {current_user['email']}",
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(done_notif)
             
@@ -352,7 +352,7 @@ async def mark_booking_done(
                 message=f"User {current_user['email']} marked booking as done. Notes: {notes}",
                 type="info",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(admin_notification)
         

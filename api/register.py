@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from api.auth_utils import get_password_hash
+from api.auth_utils import get_password_hash, get_philippine_time
 from database import SessionLocal, User, AccountRequest
 from datetime import datetime
 
@@ -64,7 +64,7 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
             acc_role=new_user.acc_role,
             is_supervisor=False,
             is_intern=False,
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         db.add(account_request)
         await db.commit()

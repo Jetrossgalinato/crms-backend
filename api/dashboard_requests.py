@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from jose import JWTError, jwt
-from api.auth_utils import SECRET_KEY, ALGORITHM
+from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 import math
 
 router = APIRouter()
@@ -301,7 +301,7 @@ async def bulk_update_borrowing_status(
                 message=f"Your borrowing request for equipment has been {request.status.lower()}",
                 type="info" if request.status == "Approved" else "warning",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(notification)
             
@@ -317,7 +317,7 @@ async def bulk_update_borrowing_status(
                     action=f"Borrowing {request.status}",
                     details=f"Borrowing request ID {borrowing.id} {request.status.lower()} for {equipment.name}",
                     user_email=current_user["email"],
-                    created_at=datetime.utcnow()
+                    created_at=get_philippine_time()
                 )
                 db.add(log)
             
@@ -366,7 +366,7 @@ async def bulk_delete_borrowing_requests(
                 message="Your borrowing request has been deleted by an administrator",
                 type="warning",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(notification)
             
@@ -376,7 +376,7 @@ async def bulk_delete_borrowing_requests(
                 action="Borrowing Deleted",
                 details=f"Borrowing request ID {borrowing.id} deleted",
                 user_email=current_user["email"],
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(log)
         
@@ -443,7 +443,7 @@ async def confirm_equipment_return(
             message="Your equipment return has been confirmed",
             type="success",
             is_read=False,
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         db.add(borrower_notification)
         
@@ -453,7 +453,7 @@ async def confirm_equipment_return(
             action="Return Confirmed",
             details=f"Equipment return confirmed for borrowing ID {borrowing.id}",
             user_email=current_user["email"],
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         db.add(log)
         
@@ -504,7 +504,7 @@ async def reject_equipment_return(
                 message="Your equipment return has been rejected. Please contact admin.",
                 type="error",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(borrower_notification)
             
@@ -514,7 +514,7 @@ async def reject_equipment_return(
                 action="Return Rejected",
                 details=f"Equipment return rejected for borrowing ID {borrowing.id}",
                 user_email=current_user["email"],
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(log)
         
@@ -650,7 +650,7 @@ async def bulk_update_booking_status(
         for booking in bookings:
             # Update booking status
             booking.status = request.status
-            booking.updated_at = datetime.utcnow()
+            booking.updated_at = get_philippine_time()
             
             # Create notification for booker
             notification = Notification(
@@ -659,7 +659,7 @@ async def bulk_update_booking_status(
                 message=f"Your facility booking request has been {request.status.lower()}",
                 type="info" if request.status == "Approved" else "warning",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(notification)
             
@@ -669,7 +669,7 @@ async def bulk_update_booking_status(
                 action=f"Booking {request.status}",
                 details=f"Booking request ID {booking.id} {request.status.lower()}",
                 user_email=current_user["email"],
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(log)
             
@@ -713,7 +713,7 @@ async def bulk_delete_booking_requests(
                 message="Your booking request has been deleted by an administrator",
                 type="warning",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(notification)
             
@@ -723,7 +723,7 @@ async def bulk_delete_booking_requests(
                 action="Booking Deleted",
                 details=f"Booking request ID {booking.id} deleted",
                 user_email=current_user["email"],
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(log)
         
@@ -775,7 +775,7 @@ async def confirm_booking_completion(
         
         # Update booking status
         booking.status = "Completed"
-        booking.updated_at = datetime.utcnow()
+        booking.updated_at = get_philippine_time()
         
         # Update notification status
         notification.status = "confirmed"
@@ -787,7 +787,7 @@ async def confirm_booking_completion(
             message="Your booking completion has been confirmed",
             type="success",
             is_read=False,
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         db.add(booker_notification)
         
@@ -797,7 +797,7 @@ async def confirm_booking_completion(
             action="Booking Completed",
             details=f"Booking completion confirmed for booking ID {booking.id}",
             user_email=current_user["email"],
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         db.add(log)
         
@@ -848,7 +848,7 @@ async def dismiss_booking_completion(
                 message="Your booking completion notification has been dismissed",
                 type="info",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(booker_notification)
             
@@ -858,7 +858,7 @@ async def dismiss_booking_completion(
                 action="Booking Completion Dismissed",
                 details=f"Booking completion dismissed for booking ID {booking.id}",
                 user_email=current_user["email"],
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(log)
         
@@ -974,11 +974,11 @@ async def bulk_update_acquiring_status(
                 
                 # Deduct quantity
                 supply.quantity -= acquiring.quantity
-                supply.updated_at = datetime.utcnow()
+                supply.updated_at = get_philippine_time()
             
             # Update acquiring status
             acquiring.status = request.status
-            acquiring.updated_at = datetime.utcnow()
+            acquiring.updated_at = get_philippine_time()
             
             # Create notification for acquirer
             notification = Notification(
@@ -987,7 +987,7 @@ async def bulk_update_acquiring_status(
                 message=f"Your supply acquiring request has been {request.status.lower()}",
                 type="info" if request.status == "Approved" else "warning",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(notification)
             
@@ -997,7 +997,7 @@ async def bulk_update_acquiring_status(
                 action=f"Acquiring {request.status}",
                 details=f"Acquiring request ID {acquiring.id} {request.status.lower()}, quantity: {acquiring.quantity}",
                 user_email=current_user["email"],
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(log)
             
@@ -1041,7 +1041,7 @@ async def bulk_delete_acquiring_requests(
                 message="Your acquiring request has been deleted by an administrator",
                 type="warning",
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(notification)
             
@@ -1051,7 +1051,7 @@ async def bulk_delete_acquiring_requests(
                 action="Acquiring Deleted",
                 details=f"Acquiring request ID {acquiring.id} deleted",
                 user_email=current_user["email"],
-                created_at=datetime.utcnow()
+                created_at=get_philippine_time()
             )
             db.add(log)
         

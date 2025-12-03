@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from jose import JWTError, jwt
-from api.auth_utils import SECRET_KEY, ALGORITHM
+from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 import os
 import uuid
 import math
@@ -229,7 +229,7 @@ async def create_supply(
             description=supply_data.description,
             image_url=supply_data.image,
             remarks=supply_data.remarks,
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         
         db.add(new_supply)
@@ -293,7 +293,7 @@ async def update_supply(
         if supply_data.remarks is not None:
             supply.remarks = supply_data.remarks
         
-        supply.updated_at = datetime.utcnow()
+        supply.updated_at = get_philippine_time()
         
         await db.commit()
         await db.refresh(supply)
@@ -400,7 +400,7 @@ async def bulk_import_supplies(
                     description=supply_data.description,
                     image_url=supply_data.image,
                     remarks=supply_data.remarks,
-                    created_at=datetime.utcnow()
+                    created_at=get_philippine_time()
                 )
                 
                 db.add(new_supply)
@@ -456,7 +456,7 @@ async def log_supply_action(
             action=log_data.action,
             details=log_details,
             user_email=current_user["email"],
-            created_at=datetime.utcnow()
+            created_at=get_philippine_time()
         )
         
         db.add(new_log)

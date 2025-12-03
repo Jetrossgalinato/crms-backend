@@ -5,7 +5,7 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists
 from database import SessionLocal, User, Equipment, Facility, Borrowing
-from api.auth_utils import SECRET_KEY, ALGORITHM
+from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 from typing import List, Optional
 from datetime import datetime
 
@@ -229,7 +229,7 @@ async def create_borrowing_request(
         return_date=borrowing.return_date,
         request_status=borrowing.request_status,
         availability=borrowing.availability,
-        created_at=datetime.utcnow()
+        created_at=get_philippine_time()
     )
     
     db.add(new_borrowing)
