@@ -544,7 +544,7 @@ async def get_facility_logs(
         logs_data = []
         for log in logs:
             # Get facility name if facility_id exists
-            facility_name = "Unknown Facility"
+            facility_name = "Facility"
             if log.facility_id:
                 facility_result = await db.execute(
                     select(Facility).where(Facility.facility_id == log.facility_id)
@@ -554,10 +554,14 @@ async def get_facility_logs(
                     facility_name = facility.facility_name
             
             # Construct log_message based on action and details
-            # Format: "Admin {user} {action} for {facility_name} - {details}"
             user_identifier = log.user_email.split("@")[0] if log.user_email else "User"
             
-            if log.details:
+            # If details already contains a complete message, use it directly
+            # Otherwise format it with action and facility name
+            if log.details and ("created" in log.details.lower() or "updated" in log.details.lower() or "deleted" in log.details.lower()):
+                # Details already contains full message like "created facility 'Cl1'"
+                log_message = f"Admin {user_identifier} {log.details}"
+            elif log.details:
                 log_message = f"Admin {user_identifier} {log.action} for {facility_name} - {log.details}"
             else:
                 log_message = f"Admin {user_identifier} {log.action} for {facility_name}"
