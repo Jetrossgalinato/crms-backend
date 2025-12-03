@@ -308,13 +308,14 @@ async def update_supply(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error updating supply: {str(e)}")
 
-@router.delete("/supplies")
+@router.delete("/supplies/bulk-delete")
+@router.post("/supplies/bulk-delete")
 async def delete_supplies(
     request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
-    """Delete multiple supply items"""
+    """Delete multiple supply items (supports both DELETE and POST methods)"""
     try:
         if not request.supply_ids:
             raise HTTPException(
