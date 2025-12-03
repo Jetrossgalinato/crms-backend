@@ -99,7 +99,8 @@ async def get_my_borrowing_requests(
                 "borrow_date": borrowing.start_date,
                 "expected_return_date": borrowing.end_date,
                 "purpose": borrowing.purpose,
-                "receiver_name": None  # Will be updated when returned
+                "receiver_name": None,  # Will be updated when returned
+                "return_status": borrowing.return_status
             })
         
         return {
