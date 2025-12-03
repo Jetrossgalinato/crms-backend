@@ -267,7 +267,7 @@ async def batch_delete_users(
     current_user: dict = Depends(verify_token)
 ):
     """
-    Delete multiple users by IDs.
+    Delete multiple users by IDs - permanently removes users from the users table.
     """
     try:
         if not request.user_ids:
@@ -276,9 +276,9 @@ async def batch_delete_users(
                 detail="user_ids must be a non-empty array"
             )
         
-        # Delete account requests
+        # Delete users from the users table
         result = await db.execute(
-            delete(AccountRequest).where(AccountRequest.id.in_(request.user_ids))
+            delete(User).where(User.id.in_(request.user_ids))
         )
         
         deleted_count = result.rowcount
@@ -286,7 +286,7 @@ async def batch_delete_users(
         
         return {
             "deleted_count": deleted_count,
-            "message": f"Successfully deleted {deleted_count} users"
+            "message": f"Successfully deleted {deleted_count} user(s) from the system"
         }
     
     except HTTPException:
