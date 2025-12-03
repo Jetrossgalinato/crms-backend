@@ -337,40 +337,6 @@ async def update_facility(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error updating facility: {str(e)}")
 
-@router.delete("/facilities/{facility_id}")
-async def delete_facility(
-    facility_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(verify_token)
-):
-    """Delete a single facility"""
-    try:
-        # Get facility
-        result = await db.execute(select(Facility).where(Facility.facility_id == facility_id))
-        facility = result.scalar_one_or_none()
-        
-        if not facility:
-            raise HTTPException(status_code=404, detail="Facility not found")
-        
-        # Delete image if exists
-        if facility.image_url:
-            image_path = facility.image_url.replace("/uploads/facility-images/", "")
-            file_path = os.path.join(UPLOAD_DIR, image_path)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        
-        # Delete facility
-        await db.delete(facility)
-        await db.commit()
-        
-        return {"message": "Facility deleted successfully"}
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error deleting facility: {str(e)}")
-
 @router.delete("/facilities/bulk-delete")
 @router.post("/facilities/bulk-delete")
 async def bulk_delete_facilities(
@@ -413,6 +379,40 @@ async def bulk_delete_facilities(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting facilities: {str(e)}")
+
+@router.delete("/facilities/{facility_id}")
+async def delete_facility(
+    facility_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(verify_token)
+):
+    """Delete a single facility"""
+    try:
+        # Get facility
+        result = await db.execute(select(Facility).where(Facility.facility_id == facility_id))
+        facility = result.scalar_one_or_none()
+        
+        if not facility:
+            raise HTTPException(status_code=404, detail="Facility not found")
+        
+        # Delete image if exists
+        if facility.image_url:
+            image_path = facility.image_url.replace("/uploads/facility-images/", "")
+            file_path = os.path.join(UPLOAD_DIR, image_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        # Delete facility
+        await db.delete(facility)
+        await db.commit()
+        
+        return {"message": "Facility deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error deleting facility: {str(e)}")
 
 @router.post("/facilities/bulk-import")
 async def bulk_import_facilities(
