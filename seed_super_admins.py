@@ -3,6 +3,7 @@ import sys
 import os
 
 # Add the current directory to sys.path to allow imports
+# seed command: ./venv/bin/python seed_super_admins.py
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from database import SessionLocal, User
