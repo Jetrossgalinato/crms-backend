@@ -18,9 +18,9 @@ async def seed_super_admins():
                 "last_name": "Cacho",
                 "email": "rocacho@gmail.com",
                 "password": "Password123!",
-                "department": "IT",
+                "department": "BSIT",
                 "phone_number": "09123456789",
-                "acc_role": "Super Admin",
+                "acc_role": "Comlab Adviser",
                 "status": "Approved",
                 "is_employee": True,
                 "is_approved": True
@@ -30,9 +30,9 @@ async def seed_super_admins():
                 "last_name": "Galinato",
                 "email": "jetrossgalinato@email.com",
                 "password": "Password123!",
-                "department": "IT",
+                "department": "BSIT",
                 "phone_number": "09123456789",
-                "acc_role": "Super Admin",
+                "acc_role": "Lab Technician",
                 "status": "Approved",
                 "is_employee": True,
                 "is_approved": True

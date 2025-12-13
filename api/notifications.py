@@ -105,6 +105,26 @@ async def mark_notification_as_read(
     
     return {"message": "Notification marked as read"}
 
+async def create_notification(
+    db: AsyncSession,
+    user_id: int,
+    title: str,
+    message: str,
+    type: str = "info"
+):
+    """
+    Helper function to create a notification for a user
+    """
+    notification = Notification(
+        user_id=user_id,
+        title=title,
+        message=message,
+        type=type
+    )
+    db.add(notification)
+    # Note: Caller is responsible for commit
+    return notification
+
 @router.post("/notifications/mark-all-read")
 async def mark_all_notifications_as_read(
     current_user: User = Depends(get_current_user),

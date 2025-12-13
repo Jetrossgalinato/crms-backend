@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
-from database import get_db, Equipment, Facility, Supply, Borrowing, Booking, Acquiring, AccountRequest, User, EquipmentLog, FacilityLog, SupplyLog
+from database import get_db, Equipment, Facility, Supply, Borrowing, Booking, Acquiring, AccountRequest, User, EquipmentLog, FacilityLog, SupplyLog, MaintenanceLog
 from jose import JWTError, jwt
 from api.auth_utils import SECRET_KEY, ALGORITHM
 from typing import Optional
@@ -112,6 +112,10 @@ async def get_sidebar_counts(
         supply_logs_result = await db.execute(select(func.count(SupplyLog.id)))
         supply_logs = supply_logs_result.scalar() or 0
         
+        # Maintenance logs count
+        maintenance_logs_result = await db.execute(select(func.count(MaintenanceLog.id)))
+        maintenance_logs = maintenance_logs_result.scalar() or 0
+        
         return {
             "equipments": equipments,
             "facilities": facilities,
@@ -121,6 +125,7 @@ async def get_sidebar_counts(
             "equipment_logs": equipment_logs,
             "facility_logs": facility_logs,
             "supply_logs": supply_logs,
+            "maintenance_logs": maintenance_logs,
             "account_requests": account_requests
         }
     
@@ -155,8 +160,9 @@ async def get_user_role(
         account_request = account_request_result.scalar_one_or_none()
         
         # Return approved_acc_role (may be null if not yet assigned)
-        approved_acc_role = None
-        if account_request:
+        # Fallback to user.acc_role if account_request is missing (e.g. for seeded admins)
+        approved_acc_role = user.acc_role
+        if account_request and account_request.approved_acc_role:
             approved_acc_role = account_request.approved_acc_role
         
         return {
