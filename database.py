@@ -209,6 +209,7 @@ class MaintenanceLog(Base):
     date = Column(String, nullable=False) # Storing date as string YYYY-MM-DD
     checklist_data = Column(String, nullable=False) # JSON string
     additional_concerns = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="Pending")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
