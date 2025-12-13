@@ -35,9 +35,23 @@ async def get_maintenance_logs(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Allow Admin and Staff to view logs
-    if current_user.acc_role not in ["Admin", "Staff"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    # Allow only Super Admin roles to view logs
+    # Super Admin roles: CCIS Dean, Lab Technician, Comlab Adviser, Super Admin
+    
+    allowed_roles = [
+        "ccis dean", 
+        "lab technician", 
+        "comlab adviser", 
+        "super admin"
+    ]
+    
+    user_role = current_user.acc_role.strip().lower() if current_user.acc_role else ""
+    
+    print(f"DEBUG: User {current_user.email} attempting to access maintenance logs. Role: '{current_user.acc_role}' -> Normalized: '{user_role}'")
+    
+    if user_role not in allowed_roles:
+        print(f"DEBUG: Access denied for role '{current_user.acc_role}'")
+        raise HTTPException(status_code=403, detail=f"Not authorized. Role: {current_user.acc_role}")
 
     result = await db.execute(select(MaintenanceLog).order_by(MaintenanceLog.created_at.desc()))
     logs = result.scalars().all()
@@ -64,7 +78,15 @@ async def update_maintenance_status(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.acc_role not in ["Admin", "Staff"]:
+    allowed_roles = [
+        "ccis dean", 
+        "lab technician", 
+        "comlab adviser", 
+        "super admin"
+    ]
+    user_role = current_user.acc_role.strip().lower() if current_user.acc_role else ""
+
+    if user_role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     result = await db.execute(select(MaintenanceLog).where(MaintenanceLog.id == log_id))

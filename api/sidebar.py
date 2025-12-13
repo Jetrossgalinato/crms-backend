@@ -155,8 +155,9 @@ async def get_user_role(
         account_request = account_request_result.scalar_one_or_none()
         
         # Return approved_acc_role (may be null if not yet assigned)
-        approved_acc_role = None
-        if account_request:
+        # Fallback to user.acc_role if account_request is missing (e.g. for seeded admins)
+        approved_acc_role = user.acc_role
+        if account_request and account_request.approved_acc_role:
             approved_acc_role = account_request.approved_acc_role
         
         return {
