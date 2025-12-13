@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from database import get_db, MaintenanceLog, User
 from api.auth import get_current_user
+from api.notifications import create_notification
 from pydantic import BaseModel
 from typing import List
 
@@ -96,6 +97,16 @@ async def update_maintenance_status(
         raise HTTPException(status_code=404, detail="Log not found")
     
     log.status = status_update.status
+    
+    # Notify Student Assistant
+    await create_notification(
+        db,
+        user_id=log.user_id,
+        title="Maintenance Log Update",
+        message=f"Your maintenance log for {log.laboratory} on {log.date} has been {status_update.status.lower()}.",
+        type="success" if status_update.status == "Confirmed" else "info"
+    )
+    
     await db.commit()
     
     return {"message": "Status updated successfully"}
@@ -119,6 +130,29 @@ async def create_maintenance_log(
     )
     
     db.add(new_log)
+    
+    # Notify Admins
+    # Find all users with admin roles
+    stmt = select(User).where(
+        or_(
+            User.acc_role == "CCIS Dean",
+            User.acc_role == "Lab Technician",
+            User.acc_role == "Comlab Adviser",
+            User.acc_role == "Super Admin"
+        )
+    )
+    result = await db.execute(stmt)
+    admins = result.scalars().all()
+    
+    for admin in admins:
+        await create_notification(
+            db,
+            user_id=admin.id,
+            title="New Maintenance Log",
+            message=f"Student Assistant {current_user.first_name} {current_user.last_name} submitted a maintenance log for {log_data.laboratory}.",
+            type="info"
+        )
+
     await db.commit()
     await db.refresh(new_log)
     
