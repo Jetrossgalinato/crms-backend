@@ -15,6 +15,33 @@ async def get_db():
     async with SessionLocal() as session:
         yield session
 
+async def get_current_user(
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db)
+) -> User:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+    
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid authentication scheme")
+        
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+    except (ValueError, JWTError):
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+        
+    return user
+
 class AuthVerifyResponse(BaseModel):
     user_id: str
     email: str

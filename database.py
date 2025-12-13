@@ -201,4 +201,14 @@ class SupplyLog(Base):
     user_email = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+class MaintenanceLog(Base):
+    __tablename__ = "maintenance_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    laboratory = Column(String, nullable=False)
+    date = Column(String, nullable=False) # Storing date as string YYYY-MM-DD
+    checklist_data = Column(String, nullable=False) # JSON string
+    additional_concerns = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
 
