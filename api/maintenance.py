@@ -149,7 +149,7 @@ async def create_maintenance_log(
             db,
             user_id=admin.id,
             title="New Maintenance Log",
-            message=f"Student Assistant {current_user.first_name} {current_user.last_name} submitted a maintenance log for {log_data.laboratory}.",
+            message=f"Student Assistant submitted a maintenance log for {log_data.laboratory}.",
             type="info"
         )
 
@@ -220,7 +220,7 @@ async def create_technician_maintenance_log(
             db,
             user_id=admin.id,
             title="New Technician Maintenance Log",
-            message=f"Lab Technician {current_user.first_name} {current_user.last_name} submitted a {log_data.checklist_type} maintenance log for {log_data.laboratory}.",
+            message=f"Lab Technician submitted a {log_data.checklist_type} maintenance log for {log_data.laboratory}.",
             type="info"
         )
 
