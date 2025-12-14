@@ -324,7 +324,7 @@ async def upload_equipment_image(
             )
         
         # Generate unique filename
-        timestamp = int(datetime.now().timestamp())
+        timestamp = int(get_philippine_time().timestamp())
         random_string = str(uuid.uuid4())[:8]
         filename = f"{timestamp}-{random_string}.{file_extension}"
         file_path = os.path.join(UPLOAD_DIR, filename)

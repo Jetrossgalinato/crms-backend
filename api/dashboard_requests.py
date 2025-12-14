@@ -430,8 +430,7 @@ async def confirm_equipment_return(
         borrowing.return_status = "Returned"
         borrowing.availability = "Available"
         # Set date_returned to current date (not return_date which is expected return date)
-        from datetime import date
-        today = date.today()
+        today = get_philippine_time().date()
         
         # Update notification status
         notification.status = "confirmed"

@@ -57,7 +57,7 @@ async def create_booking(
             raise HTTPException(status_code=400, detail="Return date must be after or equal to end date")
         
         # Check if start date is in the past
-        if start_date.date() < datetime.now().date():
+        if start_date.date() < get_philippine_time().date():
             raise HTTPException(status_code=400, detail="Start date cannot be in the past")
         
         # Verify user exists
