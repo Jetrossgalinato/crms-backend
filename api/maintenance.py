@@ -27,6 +27,8 @@ class MaintenanceLogResponse(BaseModel):
     user_first_name: str
     user_last_name: str
     user_role: str
+    checklist_type: str
+    log_type: str
 
     class Config:
         orm_mode = True
@@ -57,13 +59,21 @@ async def get_maintenance_logs(
         print(f"DEBUG: Access denied for role '{current_user.acc_role}'")
         raise HTTPException(status_code=403, detail=f"Not authorized. Role: {current_user.acc_role}")
 
-    stmt = select(MaintenanceLog, User).join(User, MaintenanceLog.user_id == User.id).order_by(MaintenanceLog.created_at.desc())
-    result = await db.execute(stmt)
-    logs_with_users = result.all()
+    # Fetch Student Assistant Logs (MaintenanceLog)
+    stmt_student = select(MaintenanceLog, User).join(User, MaintenanceLog.user_id == User.id).order_by(MaintenanceLog.created_at.desc())
+    result_student = await db.execute(stmt_student)
+    student_logs = result_student.all()
+
+    # Fetch Technician Logs (TechnicianMaintenanceLog)
+    stmt_tech = select(TechnicianMaintenanceLog, User).join(User, TechnicianMaintenanceLog.user_id == User.id).order_by(TechnicianMaintenanceLog.created_at.desc())
+    result_tech = await db.execute(stmt_tech)
+    tech_logs = result_tech.all()
     
-    # Convert datetime to string for response
-    return [
-        {
+    combined_logs = []
+
+    # Process Student Logs
+    for log, user in student_logs:
+        combined_logs.append({
             "id": log.id,
             "user_id": log.user_id,
             "laboratory": log.laboratory,
@@ -74,10 +84,74 @@ async def get_maintenance_logs(
             "created_at": log.created_at.isoformat(),
             "user_first_name": user.first_name,
             "user_last_name": user.last_name,
-            "user_role": user.acc_role
-        }
-        for log, user in logs_with_users
+            "user_role": user.acc_role,
+            "checklist_type": "Daily", # Default for student logs
+            "log_type": "student"
+        })
+
+    # Process Technician Logs
+    for log, user in tech_logs:
+        combined_logs.append({
+            "id": log.id,
+            "user_id": log.user_id,
+            "laboratory": log.laboratory,
+            "date": log.date,
+            "checklist_data": log.checklist_data,
+            "additional_concerns": log.additional_concerns,
+            "status": log.status,
+            "created_at": log.created_at.isoformat(),
+            "user_first_name": user.first_name,
+            "user_last_name": user.last_name,
+            "user_role": user.acc_role,
+            "checklist_type": log.checklist_type,
+            "log_type": "technician"
+        })
+
+    # Sort combined logs by created_at desc
+    combined_logs.sort(key=lambda x: x["created_at"], reverse=True)
+
+    return combined_logs
+
+@router.delete("/maintenance/{log_id}")
+async def delete_maintenance_log(
+    log_id: int,
+    log_type: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    allowed_roles = [
+        "ccis dean", 
+        "lab technician", 
+        "comlab adviser", 
+        "super admin"
     ]
+    user_role = current_user.acc_role.strip().lower() if current_user.acc_role else ""
+
+    if user_role not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if log_type == "student":
+        stmt = select(MaintenanceLog).where(MaintenanceLog.id == log_id)
+        result = await db.execute(stmt)
+        log = result.scalar_one_or_none()
+        if not log:
+            raise HTTPException(status_code=404, detail="Log not found")
+        await db.delete(log)
+        
+    elif log_type == "technician":
+        stmt = select(TechnicianMaintenanceLog).where(TechnicianMaintenanceLog.id == log_id)
+        result = await db.execute(stmt)
+        log = result.scalar_one_or_none()
+        if not log:
+            raise HTTPException(status_code=404, detail="Log not found")
+        await db.delete(log)
+        
+    else:
+        raise HTTPException(status_code=400, detail="Invalid log type")
+
+    await db.commit()
+    return {"message": "Log deleted successfully"}
+
 
 @router.put("/maintenance/{log_id}/status")
 async def update_maintenance_status(
