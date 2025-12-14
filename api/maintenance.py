@@ -24,6 +24,9 @@ class MaintenanceLogResponse(BaseModel):
     additional_concerns: str | None
     status: str
     created_at: str
+    user_first_name: str
+    user_last_name: str
+    user_role: str
 
     class Config:
         orm_mode = True
@@ -54,8 +57,9 @@ async def get_maintenance_logs(
         print(f"DEBUG: Access denied for role '{current_user.acc_role}'")
         raise HTTPException(status_code=403, detail=f"Not authorized. Role: {current_user.acc_role}")
 
-    result = await db.execute(select(MaintenanceLog).order_by(MaintenanceLog.created_at.desc()))
-    logs = result.scalars().all()
+    stmt = select(MaintenanceLog, User).join(User, MaintenanceLog.user_id == User.id).order_by(MaintenanceLog.created_at.desc())
+    result = await db.execute(stmt)
+    logs_with_users = result.all()
     
     # Convert datetime to string for response
     return [
@@ -67,9 +71,12 @@ async def get_maintenance_logs(
             "checklist_data": log.checklist_data,
             "additional_concerns": log.additional_concerns,
             "status": log.status,
-            "created_at": log.created_at.isoformat()
+            "created_at": log.created_at.isoformat(),
+            "user_first_name": user.first_name,
+            "user_last_name": user.last_name,
+            "user_role": user.acc_role
         }
-        for log in logs
+        for log, user in logs_with_users
     ]
 
 @router.put("/maintenance/{log_id}/status")
