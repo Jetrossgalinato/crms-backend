@@ -212,4 +212,16 @@ class MaintenanceLog(Base):
     status = Column(String, nullable=False, default="Pending")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+class TechnicianMaintenanceLog(Base):
+    __tablename__ = "technician_maintenance_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    laboratory = Column(String, nullable=False)
+    date = Column(String, nullable=False)
+    checklist_type = Column(String, nullable=False) # Daily, Weekly, Monthly
+    checklist_data = Column(String, nullable=False) # JSON string
+    additional_concerns = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="Pending")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
 

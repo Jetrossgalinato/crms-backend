@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
-from database import get_db, MaintenanceLog, User
+from database import get_db, MaintenanceLog, TechnicianMaintenanceLog, User
 from api.auth import get_current_user
 from api.notifications import create_notification
 from pydantic import BaseModel
@@ -157,3 +157,74 @@ async def create_maintenance_log(
     await db.refresh(new_log)
     
     return {"message": "Maintenance log submitted successfully", "id": new_log.id}
+
+
+class TechnicianMaintenanceLogCreate(BaseModel):
+    laboratory: str
+    date: str
+    checklist_type: str
+    checklist_data: str
+    additional_concerns: str | None = None
+
+class TechnicianMaintenanceLogResponse(BaseModel):
+    id: int
+    user_id: int
+    laboratory: str
+    date: str
+    checklist_type: str
+    checklist_data: str
+    additional_concerns: str | None
+    status: str
+    created_at: str
+
+    class Config:
+        orm_mode = True
+
+@router.post("/technician-maintenance", status_code=status.HTTP_201_CREATED)
+async def create_technician_maintenance_log(
+    log_data: TechnicianMaintenanceLogCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Check if user is Lab Technician
+    if current_user.acc_role != "Lab Technician":
+        raise HTTPException(status_code=403, detail="Not authorized. Only Lab Technicians can submit this log.")
+
+    new_log = TechnicianMaintenanceLog(
+        user_id=current_user.id,
+        laboratory=log_data.laboratory,
+        date=log_data.date,
+        checklist_type=log_data.checklist_type,
+        checklist_data=log_data.checklist_data,
+        additional_concerns=log_data.additional_concerns
+    )
+    
+    db.add(new_log)
+    
+    # Notify Admins (Dean, Comlab Adviser, Super Admin)
+    # Exclude Lab Technician from receiving their own notification if they are in the admin list?
+    # The requirement says "in the notifications lab technician should be displayed not Student Assistant Technician"
+    
+    stmt = select(User).where(
+        or_(
+            User.acc_role == "CCIS Dean",
+            User.acc_role == "Comlab Adviser",
+            User.acc_role == "Super Admin"
+        )
+    )
+    result = await db.execute(stmt)
+    admins = result.scalars().all()
+    
+    for admin in admins:
+        await create_notification(
+            db,
+            user_id=admin.id,
+            title="New Technician Maintenance Log",
+            message=f"Lab Technician {current_user.first_name} {current_user.last_name} submitted a {log_data.checklist_type} maintenance log for {log_data.laboratory}.",
+            type="info"
+        )
+
+    await db.commit()
+    await db.refresh(new_log)
+    
+    return {"message": "Technician maintenance log submitted successfully", "id": new_log.id}
