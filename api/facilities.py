@@ -4,12 +4,13 @@ from sqlalchemy import select, and_
 from database import get_db, Facility, Booking
 from datetime import datetime
 from typing import Optional
+from api.auth_utils import get_philippine_time
 
 router = APIRouter()
 
 def calculate_facility_status(facility_id: int, bookings: list) -> str:
     """Calculate facility status based on active bookings"""
-    now = datetime.now().date()
+    now = get_philippine_time().date()
     
     for booking in bookings:
         if booking.facility_id == facility_id and booking.status == "Approved":

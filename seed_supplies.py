@@ -7,7 +7,7 @@ from datetime import datetime
 # Add the current directory to sys.path to allow imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from database import SessionLocal, Supply
+from database import SessionLocal, Supply, get_ph_time
 
 async def seed_supplies():
     async with SessionLocal() as session:
@@ -32,8 +32,8 @@ async def seed_supplies():
                 facility_id=None, # Keeping it simple
                 remarks="Seeded data",
                 image_url=None,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=get_ph_time(),
+                updated_at=get_ph_time()
             )
             supplies.append(supply)
             

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, distinct
 from database import get_db, User, AccountRequest, Equipment, Facility, Supply, Borrowing, Booking
 from jose import JWTError, jwt, ExpiredSignatureError
-from api.auth_utils import SECRET_KEY, ALGORITHM
+from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 from typing import Optional
 from datetime import datetime, timedelta
 
@@ -107,7 +107,7 @@ async def get_dashboard_stats(
         total_supplies = total_supplies_result.scalar() or 0
         
         # Borrowed today (using start_date)
-        today = datetime.now().date().isoformat()
+        today = get_philippine_time().date().isoformat()
         borrowed_today_result = await db.execute(
             select(func.count(Borrowing.id)).where(
                 Borrowing.start_date == today,
@@ -117,7 +117,7 @@ async def get_dashboard_stats(
         borrowed_today = borrowed_today_result.scalar() or 0
         
         # Borrowed last 7 days
-        seven_days_ago = (datetime.now().date() - timedelta(days=7)).isoformat()
+        seven_days_ago = (get_philippine_time().date() - timedelta(days=7)).isoformat()
         borrowed_last_7_result = await db.execute(
             select(func.count(Borrowing.id)).where(
                 Borrowing.start_date >= seven_days_ago,

@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import os
 from dotenv import load_dotenv
 
@@ -12,6 +13,10 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password
 engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
+
+def get_ph_time():
+    """Returns the current time in Philippines time zone (Asia/Manila) as a naive datetime."""
+    return datetime.now(ZoneInfo("Asia/Manila")).replace(tzinfo=None)
 
 async def get_db():
     async with SessionLocal() as session:
@@ -45,7 +50,7 @@ class AccountRequest(Base):
     approved_acc_role = Column(String, nullable=True)
     is_supervisor = Column(Boolean, nullable=False, default=False)
     is_intern = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -55,7 +60,7 @@ class Notification(Base):
     message = Column(String, nullable=False)
     type = Column(String, nullable=False)  # info, success, warning, error
     is_read = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 class Facility(Base):
     __tablename__ = "facilities"
@@ -71,7 +76,7 @@ class Facility(Base):
     remarks = Column(String, nullable=True)
     status = Column(String, nullable=False, default="Available")
     image_url = Column(String, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
     updated_at = Column(DateTime, nullable=True)
 
 class Booking(Base):
@@ -87,13 +92,13 @@ class Booking(Base):
     return_date = Column(String, nullable=True)  # Optional for facility bookings
     status = Column(String, nullable=False, default="Pending")
     request_type = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
     updated_at = Column(DateTime, nullable=True)
 
 class Equipment(Base):
     __tablename__ = "equipments"
     id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
     name = Column(String, nullable=False)
     po_number = Column(String, nullable=True)
     unit_number = Column(String, nullable=True)
@@ -128,7 +133,7 @@ class Borrowing(Base):
     request_status = Column(String, nullable=True)  # Pending, Approved, Rejected
     return_status = Column(String, nullable=True)  # Returned, Not Returned, Overdue
     availability = Column(String, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 class Supply(Base):
     __tablename__ = "supplies"
@@ -142,7 +147,7 @@ class Supply(Base):
     facility_id = Column(Integer, ForeignKey("facilities.facility_id"), nullable=True)
     remarks = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
     updated_at = Column(DateTime, nullable=True)
 
 class Acquiring(Base):
@@ -153,7 +158,7 @@ class Acquiring(Base):
     quantity = Column(Integer, nullable=False)
     purpose = Column(String, nullable=True)
     status = Column(String, nullable=False, default="Pending")
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
     updated_at = Column(DateTime, nullable=True)
 
 class ReturnNotification(Base):
@@ -163,7 +168,7 @@ class ReturnNotification(Base):
     receiver_name = Column(String, nullable=False)
     status = Column(String, nullable=False, default="pending_confirmation")  # pending_confirmation, confirmed, rejected
     message = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 class DoneNotification(Base):
     __tablename__ = "done_notifications"
@@ -172,7 +177,7 @@ class DoneNotification(Base):
     completion_notes = Column(String, nullable=True)
     status = Column(String, nullable=False, default="pending_confirmation")  # pending_confirmation, confirmed, dismissed
     message = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 class EquipmentLog(Base):
     __tablename__ = "equipment_logs"
@@ -181,7 +186,7 @@ class EquipmentLog(Base):
     action = Column(String, nullable=False)
     details = Column(String, nullable=True)
     user_email = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 class FacilityLog(Base):
     __tablename__ = "facility_logs"
@@ -190,7 +195,7 @@ class FacilityLog(Base):
     action = Column(String, nullable=False)
     details = Column(String, nullable=True)
     user_email = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 class SupplyLog(Base):
     __tablename__ = "supply_logs"
@@ -199,7 +204,7 @@ class SupplyLog(Base):
     action = Column(String, nullable=False)
     details = Column(String, nullable=True)
     user_email = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 class MaintenanceLog(Base):
     __tablename__ = "maintenance_logs"
@@ -210,6 +215,18 @@ class MaintenanceLog(Base):
     checklist_data = Column(String, nullable=False) # JSON string
     additional_concerns = Column(String, nullable=True)
     status = Column(String, nullable=False, default="Pending")
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
+
+class TechnicianMaintenanceLog(Base):
+    __tablename__ = "technician_maintenance_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    laboratory = Column(String, nullable=False)
+    date = Column(String, nullable=False)
+    checklist_type = Column(String, nullable=False) # Daily, Weekly, Monthly
+    checklist_data = Column(String, nullable=False) # JSON string
+    additional_concerns = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="Pending")
+    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 
