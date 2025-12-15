@@ -157,6 +157,7 @@ async def delete_maintenance_log(
 async def update_maintenance_status(
     log_id: int,
     status_update: StatusUpdate,
+    log_type: str = "student",
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -171,22 +172,46 @@ async def update_maintenance_status(
     if user_role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    result = await db.execute(select(MaintenanceLog).where(MaintenanceLog.id == log_id))
-    log = result.scalar_one_or_none()
-    
-    if not log:
-        raise HTTPException(status_code=404, detail="Log not found")
-    
-    log.status = status_update.status
-    
-    # Notify Student Assistant
-    await create_notification(
-        db,
-        user_id=log.user_id,
-        title="Maintenance Log Update",
-        message=f"Your maintenance log for {log.laboratory} on {log.date} has been {status_update.status.lower()}.",
-        type="success" if status_update.status == "Confirmed" else "info"
-    )
+    if log_type == "student":
+        result = await db.execute(select(MaintenanceLog).where(MaintenanceLog.id == log_id))
+        log = result.scalar_one_or_none()
+        
+        if not log:
+            raise HTTPException(status_code=404, detail="Log not found")
+        
+        log.status = status_update.status
+        
+        # Notify Student Assistant
+        await create_notification(
+            db,
+            user_id=log.user_id,
+            title="Maintenance Log Update",
+            message=f"Your maintenance log for {log.laboratory} on {log.date} has been {status_update.status.lower()}.",
+            type="success" if status_update.status == "Confirmed" else "info"
+        )
+        
+    elif log_type == "technician":
+        result = await db.execute(select(TechnicianMaintenanceLog).where(TechnicianMaintenanceLog.id == log_id))
+        log = result.scalar_one_or_none()
+        
+        if not log:
+            raise HTTPException(status_code=404, detail="Log not found")
+            
+        log.status = status_update.status
+        
+        # Notify Technician (optional, since they might be the one confirming or it's a self-check)
+        # But if a Dean confirms a Technician's log, we might want to notify.
+        if log.user_id != current_user.id:
+             await create_notification(
+                db,
+                user_id=log.user_id,
+                title="Maintenance Log Update",
+                message=f"Your maintenance log for {log.laboratory} on {log.date} has been {status_update.status.lower()}.",
+                type="success" if status_update.status == "Confirmed" else "info"
+            )
+            
+    else:
+        raise HTTPException(status_code=400, detail="Invalid log type")
     
     await db.commit()
     
