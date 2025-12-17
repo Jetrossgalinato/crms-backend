@@ -13,6 +13,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password
 engine = create_async_engine(
     DATABASE_URL, 
     echo=True,
+    # Disable statement cache for Supabase Transaction Pooler
     connect_args={"statement_cache_size": 0}
 )
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
