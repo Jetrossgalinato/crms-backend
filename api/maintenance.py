@@ -53,10 +53,7 @@ async def get_maintenance_logs(
     
     user_role = current_user.acc_role.strip().lower() if current_user.acc_role else ""
     
-    print(f"DEBUG: User {current_user.email} attempting to access maintenance logs. Role: '{current_user.acc_role}' -> Normalized: '{user_role}'")
-    
     if user_role not in allowed_roles:
-        print(f"DEBUG: Access denied for role '{current_user.acc_role}'")
         raise HTTPException(status_code=403, detail=f"Not authorized. Role: {current_user.acc_role}")
 
     # Fetch Student Assistant Logs (MaintenanceLog)
