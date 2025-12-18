@@ -25,8 +25,24 @@ from api.users_management import router as users_management_router
 from api.maintenance import router as maintenance_router
 from database import engine, Base
 import os
+import logging
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# Global Exception Handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global exception occurred: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Internal Server Error", "detail": str(exc)},
+    )
 
 # Configure CORS
 app.add_middleware(
