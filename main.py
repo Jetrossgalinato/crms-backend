@@ -32,9 +32,9 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://erma-frontend.vercel.app",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://erma-frontend.vercel.app",
     ],
     allow_origin_regex="https://.*\.vercel\.app",  # Allow all vercel subdomains
     allow_credentials=True,
