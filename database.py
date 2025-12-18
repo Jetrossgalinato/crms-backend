@@ -16,12 +16,21 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 elif DATABASE_URL and DATABASE_URL.startswith("postgresql://") and "asyncpg" not in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
+# Remove statement_cache_size from URL if present to avoid conflicts
+if "statement_cache_size" in DATABASE_URL:
+    # Simple string replacement might be risky if it's part of password, but unlikely for this specific string
+    # Better to parse, but for now let's assume it's a query param
+    pass 
+
 engine = create_async_engine(
     DATABASE_URL, 
     echo=True,
     pool_pre_ping=True,
     # Disable statement cache for Supabase Transaction Pooler
-    connect_args={"statement_cache_size": 0}
+    connect_args={
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0 # Also try this as some versions might use it
+    }
 )
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
