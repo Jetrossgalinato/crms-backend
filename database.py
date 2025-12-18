@@ -23,13 +23,10 @@ if "statement_cache_size" in DATABASE_URL:
     pass 
 
 engine = create_async_engine(
-    DATABASE_URL, 
+    DATABASE_URL,
     echo=True,
-    pool_pre_ping=True,
-    # Disable statement cache for Supabase Transaction Pooler
     connect_args={
-        "statement_cache_size": 0,
-        "prepared_statement_cache_size": 0 # Also try this as some versions might use it
+        "statement_cache_size": 0
     }
 )
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
