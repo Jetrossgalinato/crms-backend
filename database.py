@@ -16,13 +16,7 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 elif DATABASE_URL and DATABASE_URL.startswith("postgresql://") and "asyncpg" not in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-engine = create_async_engine(
-    DATABASE_URL, 
-    echo=True,
-    # Disable statement cache for Supabase Transaction Pooler
-    connect_args={"statement_cache_size": 0},
-    pool_pre_ping=True
-)
+engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
 
