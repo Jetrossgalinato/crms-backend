@@ -21,6 +21,11 @@ if "statement_cache_size" in DATABASE_URL:
     import re
     DATABASE_URL = re.sub(r"[?&]statement_cache_size=[^&]+", "", DATABASE_URL) 
 
+# Force statement_cache_size=0 in the URL query params to ensure asyncpg disables caching
+# This is often more reliable than connect_args for some SQLAlchemy/asyncpg versions
+separator = "&" if "?" in DATABASE_URL else "?"
+DATABASE_URL = f"{DATABASE_URL}{separator}statement_cache_size=0"
+
 # Log the configured URL (masked)
 masked_url = DATABASE_URL
 if ":" in masked_url and "@" in masked_url:
@@ -35,7 +40,6 @@ print(f"Database URL configured: {masked_url}")
 
 engine = create_async_engine(
     DATABASE_URL,
-    connect_args={"statement_cache_size": 0}, # Must be integer 0
     echo=True,
     pool_pre_ping=True,
     pool_recycle=300,
