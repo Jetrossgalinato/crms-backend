@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.engine.url import make_url
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -17,29 +18,22 @@ elif DATABASE_URL and DATABASE_URL.startswith("postgresql://") and "asyncpg" not
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 # Remove statement_cache_size from URL if present to avoid conflicts
-if "statement_cache_size" in DATABASE_URL:
-    import re
-    DATABASE_URL = re.sub(r"[?&]statement_cache_size=[^&]+", "", DATABASE_URL) 
+# Parse the URL to ensure we handle query params correctly
+url_obj = make_url(DATABASE_URL)
 
-# Force statement_cache_size=0 in the URL query params to ensure asyncpg disables caching
-# This is often more reliable than connect_args for some SQLAlchemy/asyncpg versions
-separator = "&" if "?" in DATABASE_URL else "?"
-DATABASE_URL = f"{DATABASE_URL}{separator}statement_cache_size=0"
+# Remove statement_cache_size from query params if present
+if "statement_cache_size" in url_obj.query:
+    # Create a new query dictionary without statement_cache_size
+    new_query = {k: v for k, v in url_obj.query.items() if k != "statement_cache_size"}
+    url_obj = url_obj._replace(query=new_query)
 
 # Log the configured URL (masked)
-masked_url = DATABASE_URL
-if ":" in masked_url and "@" in masked_url:
-    # Mask password
-    prefix = masked_url.split("@")[0]
-    suffix = masked_url.split("@")[1]
-    if ":" in prefix:
-        user_part = prefix.split(":")[0] # postgresql+asyncpg://user
-        # Keep scheme and user, mask password
-        masked_url = f"{user_part}:******@{suffix}"
+masked_url = url_obj.render_as_string(hide_password=True)
 print(f"Database URL configured: {masked_url}")
 
 engine = create_async_engine(
-    DATABASE_URL,
+    url_obj,
+    connect_args={"statement_cache_size": 0}, # Must be integer 0
     echo=True,
     pool_pre_ping=True,
     pool_recycle=300,
