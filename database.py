@@ -21,10 +21,24 @@ if "statement_cache_size" in DATABASE_URL:
     import re
     DATABASE_URL = re.sub(r"[?&]statement_cache_size=[^&]+", "", DATABASE_URL) 
 
+# Log the configured URL (masked)
+masked_url = DATABASE_URL
+if ":" in masked_url and "@" in masked_url:
+    # Mask password
+    prefix = masked_url.split("@")[0]
+    suffix = masked_url.split("@")[1]
+    if ":" in prefix:
+        user_part = prefix.split(":")[0] # postgresql+asyncpg://user
+        # Keep scheme and user, mask password
+        masked_url = f"{user_part}:******@{suffix}"
+print(f"Database URL configured: {masked_url}")
+
 engine = create_async_engine(
     DATABASE_URL,
     connect_args={"statement_cache_size": 0}, # Must be integer 0
-    echo=True
+    echo=True,
+    pool_pre_ping=True,
+    pool_recycle=300,
 )
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()

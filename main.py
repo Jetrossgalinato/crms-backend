@@ -24,6 +24,7 @@ from api.dashboard_requests import router as dashboard_requests_router
 from api.users_management import router as users_management_router
 from api.maintenance import router as maintenance_router
 from database import engine, Base
+from sqlalchemy import text
 import os
 import logging
 from fastapi import Request
@@ -75,6 +76,19 @@ app.add_middleware(
 # Mount static files for uploaded images
 if os.path.exists("uploads"):
     app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+@app.get("/api/health")
+async def health_check():
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "unhealthy", "database": "disconnected", "error": str(e)}
+        )
 
 app.include_router(login_router, prefix="/api")
 app.include_router(register_router, prefix="/api")
