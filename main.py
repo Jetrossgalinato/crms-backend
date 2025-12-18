@@ -72,11 +72,6 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# @app.on_event("startup")
-# async def on_startup():
-#     async with engine.begin() as conn:
-#         await conn.run_sync(Base.metadata.create_all)
-
 # Mount static files for uploaded images
 if os.path.exists("uploads"):
     app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
