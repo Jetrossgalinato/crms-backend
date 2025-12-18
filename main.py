@@ -66,7 +66,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow all vercel subdomains
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow all vercel subdomains (Raw string fixed)
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods (GET, POST, PUT, DELETE, etc.)
     allow_headers=["*"],  # Allow all headers
