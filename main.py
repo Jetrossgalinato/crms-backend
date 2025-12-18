@@ -77,6 +77,10 @@ app.add_middleware(
 if os.path.exists("uploads"):
     app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "ERMA v2 Backend is running"}
+
 @app.get("/api/health")
 async def health_check():
     try:
