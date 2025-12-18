@@ -24,7 +24,7 @@ if "statement_cache_size" in DATABASE_URL:
 engine = create_async_engine(
     DATABASE_URL,
     connect_args={
-        "statement_cache_size": 0  # This MUST be the number 0, not a string
+        "statement_cache_size": 0  # This MUST be the number 0
     }
 )
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
