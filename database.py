@@ -1,6 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.engine.url import make_url
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -17,26 +16,9 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 elif DATABASE_URL and DATABASE_URL.startswith("postgresql://") and "asyncpg" not in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# Remove statement_cache_size from URL if present to avoid conflicts
-# Parse the URL to ensure we handle query params correctly
-url_obj = make_url(DATABASE_URL)
-
-# Remove statement_cache_size from query params if present
-if "statement_cache_size" in url_obj.query:
-    # Create a new query dictionary without statement_cache_size
-    new_query = {k: v for k, v in url_obj.query.items() if k != "statement_cache_size"}
-    url_obj = url_obj._replace(query=new_query)
-
-# Log the configured URL (masked)
-masked_url = url_obj.render_as_string(hide_password=True)
-print(f"Database URL configured: {masked_url}")
-
 engine = create_async_engine(
-    url_obj,
-    connect_args={"statement_cache_size": 0}, # Must be integer 0
+    DATABASE_URL,
     echo=True,
-    pool_pre_ping=True,
-    pool_recycle=300,
 )
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
