@@ -18,14 +18,13 @@ elif DATABASE_URL and DATABASE_URL.startswith("postgresql://") and "asyncpg" not
 
 # Remove statement_cache_size from URL if present to avoid conflicts
 if "statement_cache_size" in DATABASE_URL:
-    # Simple string replacement might be risky if it's part of password, but unlikely for this specific string
-    # Better to parse, but for now let's assume it's a query param
-    pass 
+    import re
+    DATABASE_URL = re.sub(r"[?&]statement_cache_size=[^&]+", "", DATABASE_URL) 
 
 engine = create_async_engine(
     DATABASE_URL,
     connect_args={
-        "statement_cache_size": 0
+        "statement_cache_size": 0  # This MUST be the number 0, not "0"
     }
 )
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
