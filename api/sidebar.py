@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
-from database import get_db, Equipment, Facility, Supply, Borrowing, Booking, Acquiring, AccountRequest, User, EquipmentLog, FacilityLog, SupplyLog, MaintenanceLog
+from database import get_db, Equipment, Facility, Supply, Borrowing, Booking, Acquiring, AccountRequest, User, EquipmentLog, FacilityLog, SupplyLog, MaintenanceLog, TechnicianMaintenanceLog
 from jose import JWTError, jwt
 from api.auth_utils import SECRET_KEY, ALGORITHM
 from typing import Optional
@@ -114,7 +114,12 @@ async def get_sidebar_counts(
         
         # Maintenance logs count
         maintenance_logs_result = await db.execute(select(func.count(MaintenanceLog.id)))
-        maintenance_logs = maintenance_logs_result.scalar() or 0
+        student_maintenance_logs = maintenance_logs_result.scalar() or 0
+
+        technician_maintenance_logs_result = await db.execute(select(func.count(TechnicianMaintenanceLog.id)))
+        technician_maintenance_logs = technician_maintenance_logs_result.scalar() or 0
+        
+        maintenance_logs = student_maintenance_logs + technician_maintenance_logs
         
         return {
             "equipments": equipments,
