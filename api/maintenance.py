@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from database import get_db, MaintenanceLog, TechnicianMaintenanceLog, User
@@ -6,6 +6,7 @@ from api.auth import get_current_user
 from api.notifications import create_notification
 from pydantic import BaseModel
 from typing import List
+import math
 
 router = APIRouter()
 
@@ -33,11 +34,20 @@ class MaintenanceLogResponse(BaseModel):
     class Config:
         orm_mode = True
 
+class PaginatedMaintenanceLogs(BaseModel):
+    logs: List[MaintenanceLogResponse]
+    total_count: int
+    total_pages: int
+    page: int
+
 class StatusUpdate(BaseModel):
     status: str
 
-@router.get("/maintenance", response_model=List[MaintenanceLogResponse])
+@router.get("/maintenance", response_model=PaginatedMaintenanceLogs)
 async def get_maintenance_logs(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    checklist_type: str = Query("All"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -104,10 +114,26 @@ async def get_maintenance_logs(
             "log_type": "technician"
         })
 
+    # Filter combined logs
+    if checklist_type != "All":
+        combined_logs = [log for log in combined_logs if log["checklist_type"] == checklist_type]
+
     # Sort combined logs by created_at desc
     combined_logs.sort(key=lambda x: x["created_at"], reverse=True)
 
-    return combined_logs
+    # Pagination
+    total_count = len(combined_logs)
+    total_pages = math.ceil(total_count / limit) if total_count > 0 else 1
+    start = (page - 1) * limit
+    end = start + limit
+    paginated_logs = combined_logs[start:end]
+
+    return {
+        "logs": paginated_logs,
+        "total_count": total_count,
+        "total_pages": total_pages,
+        "page": page
+    }
 
 @router.delete("/maintenance/{log_id}")
 async def delete_maintenance_log(
