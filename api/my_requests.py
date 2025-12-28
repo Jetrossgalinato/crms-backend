@@ -371,7 +371,7 @@ async def mark_booking_done(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error marking booking as done: {str(e)}")
 
-@router.delete("/borrowing/bulk-delete")
+@router.delete("/my-requests/borrowing/bulk-delete")
 async def bulk_delete_borrowing(
     request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
@@ -422,7 +422,7 @@ async def bulk_delete_borrowing(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting borrowing requests: {str(e)}")
 
-@router.delete("/booking/bulk-delete")
+@router.delete("/my-requests/booking/bulk-delete")
 async def bulk_delete_booking(
     request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
@@ -473,7 +473,7 @@ async def bulk_delete_booking(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting booking requests: {str(e)}")
 
-@router.delete("/acquiring/bulk-delete")
+@router.delete("/my-requests/acquiring/bulk-delete")
 async def bulk_delete_acquiring(
     request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
