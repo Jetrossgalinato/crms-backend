@@ -371,7 +371,7 @@ async def mark_booking_done(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error marking booking as done: {str(e)}")
 
-@router.delete("/borrowing/bulk-delete")
+@router.delete("/my-requests/borrowing/bulk-delete")
 async def bulk_delete_borrowing(
     request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
@@ -398,10 +398,10 @@ async def bulk_delete_borrowing(
                     detail="Cannot delete requests that don't belong to you"
                 )
             
-            if borrowing.request_status == "Approved":
+            if borrowing.request_status == "Approved" and borrowing.return_status != "Returned":
                 raise HTTPException(
                     status_code=403,
-                    detail="Cannot delete approved requests"
+                    detail="Cannot delete active borrowing requests"
                 )
         
         # Delete borrowings
@@ -422,7 +422,7 @@ async def bulk_delete_borrowing(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting borrowing requests: {str(e)}")
 
-@router.delete("/booking/bulk-delete")
+@router.delete("/my-requests/booking/bulk-delete")
 async def bulk_delete_booking(
     request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
@@ -448,12 +448,6 @@ async def bulk_delete_booking(
                     status_code=403,
                     detail="Cannot delete requests that don't belong to you"
                 )
-            
-            if booking.status == "Approved":
-                raise HTTPException(
-                    status_code=403,
-                    detail="Cannot delete approved requests"
-                )
         
         # Delete bookings
         await db.execute(
@@ -473,7 +467,7 @@ async def bulk_delete_booking(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting booking requests: {str(e)}")
 
-@router.delete("/acquiring/bulk-delete")
+@router.delete("/my-requests/acquiring/bulk-delete")
 async def bulk_delete_acquiring(
     request: BulkDeleteRequest,
     db: AsyncSession = Depends(get_db),
@@ -498,12 +492,6 @@ async def bulk_delete_acquiring(
                 raise HTTPException(
                     status_code=403,
                     detail="Cannot delete requests that don't belong to you"
-                )
-            
-            if acquiring.status == "Approved":
-                raise HTTPException(
-                    status_code=403,
-                    detail="Cannot delete approved requests"
                 )
         
         # Delete acquirings
