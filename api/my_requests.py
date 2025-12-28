@@ -398,10 +398,10 @@ async def bulk_delete_borrowing(
                     detail="Cannot delete requests that don't belong to you"
                 )
             
-            if borrowing.request_status == "Approved":
+            if borrowing.request_status == "Approved" and borrowing.return_status != "Returned":
                 raise HTTPException(
                     status_code=403,
-                    detail="Cannot delete approved requests"
+                    detail="Cannot delete active borrowing requests"
                 )
         
         # Delete borrowings
@@ -448,12 +448,6 @@ async def bulk_delete_booking(
                     status_code=403,
                     detail="Cannot delete requests that don't belong to you"
                 )
-            
-            if booking.status == "Approved":
-                raise HTTPException(
-                    status_code=403,
-                    detail="Cannot delete approved requests"
-                )
         
         # Delete bookings
         await db.execute(
@@ -498,12 +492,6 @@ async def bulk_delete_acquiring(
                 raise HTTPException(
                     status_code=403,
                     detail="Cannot delete requests that don't belong to you"
-                )
-            
-            if acquiring.status == "Approved":
-                raise HTTPException(
-                    status_code=403,
-                    detail="Cannot delete approved requests"
                 )
         
         # Delete acquirings
