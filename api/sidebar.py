@@ -77,15 +77,27 @@ async def get_sidebar_counts(
         users = users_result.scalar() or 0
         
         # Borrowing requests count
-        borrowing_result = await db.execute(select(func.count(Borrowing.id)))
+        borrowing_result = await db.execute(
+            select(func.count(Borrowing.id))
+            .join(Equipment, Borrowing.borrowed_item == Equipment.id)
+            .join(User, Borrowing.borrowers_id == User.id)
+        )
         borrowing_count = borrowing_result.scalar() or 0
         
         # Booking requests count
-        booking_result = await db.execute(select(func.count(Booking.id)))
+        booking_result = await db.execute(
+            select(func.count(Booking.id))
+            .join(Facility, Booking.facility_id == Facility.facility_id)
+            .join(User, Booking.bookers_id == User.id)
+        )
         booking_count = booking_result.scalar() or 0
         
         # Acquiring requests count
-        acquiring_result = await db.execute(select(func.count(Acquiring.id)))
+        acquiring_result = await db.execute(
+            select(func.count(Acquiring.id))
+            .join(Supply, Acquiring.supply_id == Supply.supply_id)
+            .join(User, Acquiring.acquirers_id == User.id)
+        )
         acquiring_count = acquiring_result.scalar() or 0
         
         # Total requests (sum of all request types)
