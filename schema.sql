@@ -31,7 +31,7 @@ CREATE TABLE account_requests (
     is_supervisor BOOLEAN NOT NULL DEFAULT FALSE,
     is_intern BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 CREATE INDEX ix_account_requests_id ON account_requests (id);
@@ -45,7 +45,7 @@ CREATE TABLE notifications (
     type VARCHAR NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 CREATE INDEX ix_notifications_id ON notifications (id);
@@ -240,33 +240,3 @@ CREATE TABLE supply_logs (
 
 CREATE INDEX ix_supply_logs_id ON supply_logs (id);
 
--- Maintenance Logs Table
-CREATE TABLE maintenance_logs (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    laboratory VARCHAR NOT NULL,
-    date VARCHAR NOT NULL,
-    checklist_data VARCHAR NOT NULL,
-    additional_concerns VARCHAR,
-    status VARCHAR NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES users (id)
-);
-
-CREATE INDEX ix_maintenance_logs_id ON maintenance_logs (id);
-
--- Technician Maintenance Logs Table
-CREATE TABLE technician_maintenance_logs (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    laboratory VARCHAR NOT NULL,
-    date VARCHAR NOT NULL,
-    checklist_type VARCHAR NOT NULL,
-    checklist_data VARCHAR NOT NULL,
-    additional_concerns VARCHAR,
-    status VARCHAR NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES users (id)
-);
-
-CREATE INDEX ix_technician_maintenance_logs_id ON technician_maintenance_logs (id);

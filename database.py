@@ -48,7 +48,7 @@ class User(Base):
 class AccountRequest(Base):
     __tablename__ = "account_requests"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     email = Column(String, nullable=False)
@@ -64,7 +64,7 @@ class AccountRequest(Base):
 class Notification(Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String, nullable=False)
     message = Column(String, nullable=False)
     type = Column(String, nullable=False)  # info, success, warning, error
@@ -215,27 +215,5 @@ class SupplyLog(Base):
     user_email = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
-class MaintenanceLog(Base):
-    __tablename__ = "maintenance_logs"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    laboratory = Column(String, nullable=False)
-    date = Column(String, nullable=False) # Storing date as string YYYY-MM-DD
-    checklist_data = Column(String, nullable=False) # JSON string
-    additional_concerns = Column(String, nullable=True)
-    status = Column(String, nullable=False, default="Pending")
-    created_at = Column(DateTime, nullable=False, default=get_ph_time)
-
-class TechnicianMaintenanceLog(Base):
-    __tablename__ = "technician_maintenance_logs"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    laboratory = Column(String, nullable=False)
-    date = Column(String, nullable=False)
-    checklist_type = Column(String, nullable=False) # Daily, Weekly, Monthly
-    checklist_data = Column(String, nullable=False) # JSON string
-    additional_concerns = Column(String, nullable=True)
-    status = Column(String, nullable=False, default="Pending")
-    created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
 
