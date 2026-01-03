@@ -50,6 +50,7 @@ class UserUpdateRequest(BaseModel):
     phone_number: Optional[str] = None
     acc_role: Optional[str] = None
     approved_acc_role: Optional[str] = None
+    email: Optional[str] = None
 
 class UserResponse(UserBase):
     id: int
@@ -247,14 +248,39 @@ async def update_user(
         if user_data.acc_role is not None:
             user.acc_role = user_data.acc_role
         
-        # Also update AccountRequest if it exists (for approved_acc_role)
-        if user_data.approved_acc_role is not None:
-            account_request_result = await db.execute(
-                select(AccountRequest).where(AccountRequest.user_id == user_id)
+        # Handle email update with duplicate check
+        if user_data.email is not None and user_data.email != user.email:
+            # Check if email already exists
+            email_check = await db.execute(
+                select(User).where(and_(User.email == user_data.email, User.id != user_id))
             )
-            account_request = account_request_result.scalar_one_or_none()
-            if account_request:
+            if email_check.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="Email already registered")
+            user.email = user_data.email
+        
+        # Also update AccountRequest if it exists
+        account_request_result = await db.execute(
+            select(AccountRequest).where(AccountRequest.user_id == user_id)
+        )
+        account_request = account_request_result.scalar_one_or_none()
+        
+        if account_request:
+            if user_data.approved_acc_role is not None:
                 account_request.approved_acc_role = user_data.approved_acc_role
+            
+            # Sync other fields to keep AccountRequest consistent with User
+            if user_data.first_name is not None:
+                account_request.first_name = user_data.first_name
+            if user_data.last_name is not None:
+                account_request.last_name = user_data.last_name
+            if user_data.department is not None:
+                account_request.department = user_data.department
+            if user_data.phone_number is not None:
+                account_request.phone_number = user_data.phone_number
+            if user_data.acc_role is not None:
+                account_request.acc_role = user_data.acc_role
+            if user_data.email is not None:
+                account_request.email = user_data.email
         
         await db.commit()
         await db.refresh(user)
