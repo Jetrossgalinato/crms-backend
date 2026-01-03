@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from database import get_db, User, AccountRequest
 from pydantic import BaseModel
 from jose import JWTError, jwt
@@ -45,6 +45,7 @@ class ProfileUpdate(BaseModel):
     department: str
     phone_number: str
     acc_role: str
+    email: str
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
@@ -121,6 +122,18 @@ async def update_user_profile(
         if not profile_data.phone_number or not profile_data.phone_number.strip():
             raise HTTPException(status_code=400, detail="Phone number is required")
         
+        if not profile_data.email or not profile_data.email.strip():
+            raise HTTPException(status_code=400, detail="Email is required")
+
+        # Check if email is being changed and if it's already taken
+        if profile_data.email != user.email:
+            email_exists = await db.execute(
+                select(exists().where(User.email == profile_data.email))
+            )
+            if email_exists.scalar():
+                raise HTTPException(status_code=400, detail="Email already registered")
+            user.email = profile_data.email.strip()
+        
         # Update user information
         user.first_name = profile_data.first_name.strip()
         user.last_name = profile_data.last_name.strip()
@@ -143,6 +156,8 @@ async def update_user_profile(
             account_request.department = profile_data.department.strip()
             account_request.phone_number = profile_data.phone_number.strip()
             account_request.acc_role = profile_data.acc_role.strip()
+            if profile_data.email != account_request.email:
+                account_request.email = profile_data.email.strip()
             await db.commit()
         
         return ProfileResponse(
