@@ -10,6 +10,7 @@ from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 import os
 import uuid
 import math
+import re
 
 router = APIRouter()
 
@@ -524,15 +525,23 @@ async def get_supply_logs(
             # Try to extract supply name from details if it contains it
             # Details format is often: "supply_name: Category: X, Quantity: Y"
             if log.details:
-                # Check if details starts with a supply name (before the colon)
-                details_parts = log.details.split(": ", 1)
-                if len(details_parts) > 1 and "Category" not in details_parts[0]:
-                    # First part is likely the supply name
-                    actual_supply_name = details_parts[0]
-                    remaining_details = details_parts[1]
-                    log_message = f"Admin {user_identifier} {log.action} for {actual_supply_name} - {remaining_details}"
+                # Remove ID references from details to make it clearer for users
+                clean_details = re.sub(r'\s*ID\s*\d+', '', log.details)
+                
+                if any(keyword in clean_details.lower() for keyword in ["approved", "rejected", "deleted", "created", "updated"]):
+                     # If details already contains the action and potentially the supply name (from new format)
+                     # e.g. "Acquiring request deleted for Ballpen"
+                     log_message = f"Admin {user_identifier} {clean_details}"
                 else:
-                    log_message = f"Admin {user_identifier} {log.action} for {supply_name} - {log.details}"
+                    # Check if details starts with a supply name (before the colon)
+                    details_parts = clean_details.split(": ", 1)
+                    if len(details_parts) > 1 and "Category" not in details_parts[0]:
+                        # First part is likely the supply name
+                        actual_supply_name = details_parts[0]
+                        remaining_details = details_parts[1]
+                        log_message = f"Admin {user_identifier} {log.action} for {actual_supply_name} - {remaining_details}"
+                    else:
+                        log_message = f"Admin {user_identifier} {log.action} for {supply_name} - {clean_details}"
             else:
                 log_message = f"Admin {user_identifier} {log.action} for {supply_name}"
             

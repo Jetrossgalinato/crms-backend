@@ -315,7 +315,7 @@ async def bulk_update_borrowing_status(
                 log = EquipmentLog(
                     equipment_id=equipment.id,
                     action=f"Borrowing {request.status}",
-                    details=f"Borrowing request ID {borrowing.id} {request.status.lower()} for {equipment.name}",
+                    details=f"Borrowing request {request.status.lower()} for {equipment.name}",
                     user_email=current_user["email"],
                     created_at=get_philippine_time()
                 )
@@ -371,10 +371,17 @@ async def bulk_delete_borrowing_requests(
             db.add(notification)
             
             # Log action
+            # Get equipment name for better logging
+            equipment_result = await db.execute(
+                select(Equipment).where(Equipment.id == borrowing.borrowed_item)
+            )
+            equipment = equipment_result.scalar_one_or_none()
+            equipment_name = equipment.name if equipment else "Equipment"
+
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Borrowing Deleted",
-                details=f"Borrowing request ID {borrowing.id} deleted",
+                details=f"Borrowing request deleted for {equipment_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -447,10 +454,17 @@ async def confirm_equipment_return(
         db.add(borrower_notification)
         
         # Log action
+        # Get equipment name
+        equipment_result = await db.execute(
+            select(Equipment).where(Equipment.id == borrowing.borrowed_item)
+        )
+        equipment = equipment_result.scalar_one_or_none()
+        equipment_name = equipment.name if equipment else "Equipment"
+
         log = EquipmentLog(
             equipment_id=borrowing.borrowed_item,
             action="Return Confirmed",
-            details=f"Equipment return confirmed for borrowing ID {borrowing.id}",
+            details=f"Equipment return confirmed for {equipment_name}",
             user_email=current_user["email"],
             created_at=get_philippine_time()
         )
@@ -508,10 +522,17 @@ async def reject_equipment_return(
             db.add(borrower_notification)
             
             # Log action
+            # Get equipment name
+            equipment_result = await db.execute(
+                select(Equipment).where(Equipment.id == borrowing.borrowed_item)
+            )
+            equipment = equipment_result.scalar_one_or_none()
+            equipment_name = equipment.name if equipment else "Equipment"
+
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Return Rejected",
-                details=f"Equipment return rejected for borrowing ID {borrowing.id}",
+                details=f"Equipment return rejected for {equipment_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -663,10 +684,17 @@ async def bulk_update_booking_status(
             db.add(notification)
             
             # Log action
+            # Get facility name for better logging
+            facility_result = await db.execute(
+                select(Facility).where(Facility.facility_id == booking.facility_id)
+            )
+            facility = facility_result.scalar_one_or_none()
+            facility_name = facility.facility_name if facility else "Facility"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action=f"Booking {request.status}",
-                details=f"Booking request ID {booking.id} {request.status.lower()}",
+                details=f"Booking request {request.status.lower()} for {facility_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -717,10 +745,17 @@ async def bulk_delete_booking_requests(
             db.add(notification)
             
             # Log action
+            # Get facility name for better logging
+            facility_result = await db.execute(
+                select(Facility).where(Facility.facility_id == booking.facility_id)
+            )
+            facility = facility_result.scalar_one_or_none()
+            facility_name = facility.facility_name if facility else "Facility"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action="Booking Deleted",
-                details=f"Booking request ID {booking.id} deleted",
+                details=f"Booking request for {facility_name} deleted",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -791,10 +826,17 @@ async def confirm_booking_completion(
         db.add(booker_notification)
         
         # Log action
+        # Get facility name for better logging
+        facility_result = await db.execute(
+            select(Facility).where(Facility.facility_id == booking.facility_id)
+        )
+        facility = facility_result.scalar_one_or_none()
+        facility_name = facility.facility_name if facility else "Facility"
+
         log = FacilityLog(
             facility_id=booking.facility_id,
             action="Booking Completed",
-            details=f"Booking completion confirmed for booking ID {booking.id}",
+            details=f"Booking completion confirmed for {facility_name}",
             user_email=current_user["email"],
             created_at=get_philippine_time()
         )
@@ -852,10 +894,17 @@ async def dismiss_booking_completion(
             db.add(booker_notification)
             
             # Log action
+            # Get facility name for better logging
+            facility_result = await db.execute(
+                select(Facility).where(Facility.facility_id == booking.facility_id)
+            )
+            facility = facility_result.scalar_one_or_none()
+            facility_name = facility.facility_name if facility else "Facility"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action="Booking Completion Dismissed",
-                details=f"Booking completion dismissed for booking ID {booking.id}",
+                details=f"Booking completion dismissed for {facility_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -991,10 +1040,17 @@ async def bulk_update_acquiring_status(
             db.add(notification)
             
             # Log action
+            # Get supply name for better logging
+            supply_result = await db.execute(
+                select(Supply).where(Supply.supply_id == acquiring.supply_id)
+            )
+            supply = supply_result.scalar_one_or_none()
+            supply_name = supply.supply_name if supply else "Supply"
+
             log = SupplyLog(
                 supply_id=acquiring.supply_id,
                 action=f"Acquiring {request.status}",
-                details=f"Acquiring request ID {acquiring.id} {request.status.lower()}, quantity: {acquiring.quantity}",
+                details=f"Acquiring request {request.status.lower()} for {supply_name}, quantity: {acquiring.quantity}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -1045,10 +1101,17 @@ async def bulk_delete_acquiring_requests(
             db.add(notification)
             
             # Log action
+            # Get supply name for better logging
+            supply_result = await db.execute(
+                select(Supply).where(Supply.supply_id == acquiring.supply_id)
+            )
+            supply = supply_result.scalar_one_or_none()
+            supply_name = supply.supply_name if supply else "Supply"
+
             log = SupplyLog(
                 supply_id=acquiring.supply_id,
                 action="Acquiring Deleted",
-                details=f"Acquiring request ID {acquiring.id} deleted",
+                details=f"Acquiring request deleted for {supply_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
