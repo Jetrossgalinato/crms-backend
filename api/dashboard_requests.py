@@ -371,10 +371,17 @@ async def bulk_delete_borrowing_requests(
             db.add(notification)
             
             # Log action
+            # Get equipment name for better logging
+            equipment_result = await db.execute(
+                select(Equipment).where(Equipment.id == borrowing.borrowed_item)
+            )
+            equipment = equipment_result.scalar_one_or_none()
+            equipment_name = equipment.name if equipment else "Equipment"
+
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Borrowing Deleted",
-                details="Borrowing request deleted",
+                details=f"Borrowing request deleted for {equipment_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -447,10 +454,17 @@ async def confirm_equipment_return(
         db.add(borrower_notification)
         
         # Log action
+        # Get equipment name
+        equipment_result = await db.execute(
+            select(Equipment).where(Equipment.id == borrowing.borrowed_item)
+        )
+        equipment = equipment_result.scalar_one_or_none()
+        equipment_name = equipment.name if equipment else "Equipment"
+
         log = EquipmentLog(
             equipment_id=borrowing.borrowed_item,
             action="Return Confirmed",
-            details="Equipment return confirmed",
+            details=f"Equipment return confirmed for {equipment_name}",
             user_email=current_user["email"],
             created_at=get_philippine_time()
         )
@@ -508,10 +522,17 @@ async def reject_equipment_return(
             db.add(borrower_notification)
             
             # Log action
+            # Get equipment name
+            equipment_result = await db.execute(
+                select(Equipment).where(Equipment.id == borrowing.borrowed_item)
+            )
+            equipment = equipment_result.scalar_one_or_none()
+            equipment_name = equipment.name if equipment else "Equipment"
+
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Return Rejected",
-                details="Equipment return rejected",
+                details=f"Equipment return rejected for {equipment_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )

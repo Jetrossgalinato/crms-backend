@@ -529,7 +529,11 @@ async def get_equipment_logs(
                 # Remove ID references from details to make it clearer for users
                 # Example: "Borrowing request ID 17 deleted" -> "Borrowing request deleted"
                 clean_details = re.sub(r'\s*ID\s*\d+', '', log.details)
-                log_message = f"Admin {user_identifier} {log.action} for {equipment_name} - {clean_details}"
+                
+                if any(keyword in clean_details.lower() for keyword in ["approved", "rejected", "deleted", "confirmed", "returned"]):
+                    log_message = f"Admin {user_identifier} {clean_details}"
+                else:
+                    log_message = f"Admin {user_identifier} {log.action} for {equipment_name} - {clean_details}"
             else:
                 log_message = f"Admin {user_identifier} {log.action} for {equipment_name}"
             
