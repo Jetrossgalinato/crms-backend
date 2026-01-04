@@ -315,7 +315,7 @@ async def bulk_update_borrowing_status(
                 log = EquipmentLog(
                     equipment_id=equipment.id,
                     action=f"Borrowing {request.status}",
-                    details=f"Borrowing request ID {borrowing.id} {request.status.lower()} for {equipment.name}",
+                    details=f"Borrowing request {request.status.lower()} for {equipment.name}",
                     user_email=current_user["email"],
                     created_at=get_philippine_time()
                 )
@@ -374,7 +374,7 @@ async def bulk_delete_borrowing_requests(
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Borrowing Deleted",
-                details=f"Borrowing request ID {borrowing.id} deleted",
+                details="Borrowing request deleted",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -450,7 +450,7 @@ async def confirm_equipment_return(
         log = EquipmentLog(
             equipment_id=borrowing.borrowed_item,
             action="Return Confirmed",
-            details=f"Equipment return confirmed for borrowing ID {borrowing.id}",
+            details="Equipment return confirmed",
             user_email=current_user["email"],
             created_at=get_philippine_time()
         )
@@ -511,7 +511,7 @@ async def reject_equipment_return(
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Return Rejected",
-                details=f"Equipment return rejected for borrowing ID {borrowing.id}",
+                details="Equipment return rejected",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )

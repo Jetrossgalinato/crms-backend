@@ -11,6 +11,7 @@ import os
 import shutil
 import uuid
 import math
+import re
 
 router = APIRouter()
 
@@ -525,7 +526,10 @@ async def get_equipment_logs(
             user_identifier = log.user_email.split("@")[0] if log.user_email else "User"
             
             if log.details:
-                log_message = f"Admin {user_identifier} {log.action} for {equipment_name} - {log.details}"
+                # Remove ID references from details to make it clearer for users
+                # Example: "Borrowing request ID 17 deleted" -> "Borrowing request deleted"
+                clean_details = re.sub(r'\s*ID\s*\d+', '', log.details)
+                log_message = f"Admin {user_identifier} {log.action} for {equipment_name} - {clean_details}"
             else:
                 log_message = f"Admin {user_identifier} {log.action} for {equipment_name}"
             
