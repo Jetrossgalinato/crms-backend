@@ -559,8 +559,8 @@ async def get_facility_logs(
             
             # If details already contains a complete message, use it directly
             # Otherwise format it with action and facility name
-            if log.details and ("created" in log.details.lower() or "updated" in log.details.lower() or "deleted" in log.details.lower()):
-                # Details already contains full message like "created facility 'Cl1'"
+            if log.details and any(keyword in log.details.lower() for keyword in ["created", "updated", "deleted", "approved", "rejected", "completed", "confirmed", "dismissed"]):
+                # Details already contains full message like "created facility 'Cl1'" or "Booking request approved for Facility A"
                 # Remove ID references from details to make it clearer for users
                 clean_details = re.sub(r'\s*ID\s*\d+', '', log.details)
                 log_message = f"Admin {user_identifier} {clean_details}"

@@ -663,10 +663,17 @@ async def bulk_update_booking_status(
             db.add(notification)
             
             # Log action
+            # Get facility name for better logging
+            facility_result = await db.execute(
+                select(Facility).where(Facility.facility_id == booking.facility_id)
+            )
+            facility = facility_result.scalar_one_or_none()
+            facility_name = facility.facility_name if facility else "Facility"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action=f"Booking {request.status}",
-                details=f"Booking request ID {booking.id} {request.status.lower()}",
+                details=f"Booking request {request.status.lower()} for {facility_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -717,10 +724,17 @@ async def bulk_delete_booking_requests(
             db.add(notification)
             
             # Log action
+            # Get facility name for better logging
+            facility_result = await db.execute(
+                select(Facility).where(Facility.facility_id == booking.facility_id)
+            )
+            facility = facility_result.scalar_one_or_none()
+            facility_name = facility.facility_name if facility else "Facility"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action="Booking Deleted",
-                details=f"Booking request ID {booking.id} deleted",
+                details=f"Booking request for {facility_name} deleted",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -791,10 +805,17 @@ async def confirm_booking_completion(
         db.add(booker_notification)
         
         # Log action
+        # Get facility name for better logging
+        facility_result = await db.execute(
+            select(Facility).where(Facility.facility_id == booking.facility_id)
+        )
+        facility = facility_result.scalar_one_or_none()
+        facility_name = facility.facility_name if facility else "Facility"
+
         log = FacilityLog(
             facility_id=booking.facility_id,
             action="Booking Completed",
-            details=f"Booking completion confirmed for booking ID {booking.id}",
+            details=f"Booking completion confirmed for {facility_name}",
             user_email=current_user["email"],
             created_at=get_philippine_time()
         )
@@ -852,10 +873,17 @@ async def dismiss_booking_completion(
             db.add(booker_notification)
             
             # Log action
+            # Get facility name for better logging
+            facility_result = await db.execute(
+                select(Facility).where(Facility.facility_id == booking.facility_id)
+            )
+            facility = facility_result.scalar_one_or_none()
+            facility_name = facility.facility_name if facility else "Facility"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action="Booking Completion Dismissed",
-                details=f"Booking completion dismissed for booking ID {booking.id}",
+                details=f"Booking completion dismissed for {facility_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
