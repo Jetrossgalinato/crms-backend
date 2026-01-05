@@ -1087,10 +1087,15 @@ async def bulk_update_acquiring_status(
             supply = supply_result.scalar_one_or_none()
             supply_name = supply.supply_name if supply else "Supply"
 
+            # Get acquirer info
+            user_result = await db.execute(select(User).where(User.id == acquiring.acquirers_id))
+            acquirer = user_result.scalar_one_or_none()
+            acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
+
             log = SupplyLog(
                 supply_id=acquiring.supply_id,
                 action=f"Acquiring {request.status}",
-                details=f"Acquiring request {request.status.lower()} for {supply_name}, quantity: {acquiring.quantity}",
+                details=f"Acquiring request {request.status.lower()} for {supply_name}, quantity: {acquiring.quantity} by {acquirer_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -1148,10 +1153,15 @@ async def bulk_delete_acquiring_requests(
             supply = supply_result.scalar_one_or_none()
             supply_name = supply.supply_name if supply else "Supply"
 
+            # Get acquirer info
+            user_result = await db.execute(select(User).where(User.id == acquiring.acquirers_id))
+            acquirer = user_result.scalar_one_or_none()
+            acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
+
             log = SupplyLog(
                 supply_id=acquiring.supply_id,
                 action="Acquiring Deleted",
-                details=f"Acquiring request deleted for {supply_name}",
+                details=f"Acquiring request deleted for {supply_name} by {acquirer_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
