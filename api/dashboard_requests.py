@@ -711,10 +711,15 @@ async def bulk_update_booking_status(
             facility = facility_result.scalar_one_or_none()
             facility_name = facility.facility_name if facility else "Facility"
 
+            # Get booker info
+            user_result = await db.execute(select(User).where(User.id == booking.bookers_id))
+            booker = user_result.scalar_one_or_none()
+            booker_name = f"{booker.first_name} {booker.last_name}" if booker else "Unknown User"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action=f"Booking {request.status}",
-                details=f"Booking request {request.status.lower()} for {facility_name}",
+                details=f"Booking request {request.status.lower()} for {facility_name} by {booker_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -772,10 +777,15 @@ async def bulk_delete_booking_requests(
             facility = facility_result.scalar_one_or_none()
             facility_name = facility.facility_name if facility else "Facility"
 
+            # Get booker info
+            user_result = await db.execute(select(User).where(User.id == booking.bookers_id))
+            booker = user_result.scalar_one_or_none()
+            booker_name = f"{booker.first_name} {booker.last_name}" if booker else "Unknown User"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action="Booking Deleted",
-                details=f"Booking request for {facility_name} deleted",
+                details=f"Booking request for {facility_name} deleted by {booker_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -853,10 +863,15 @@ async def confirm_booking_completion(
         facility = facility_result.scalar_one_or_none()
         facility_name = facility.facility_name if facility else "Facility"
 
+        # Get booker info
+        user_result = await db.execute(select(User).where(User.id == booking.bookers_id))
+        booker = user_result.scalar_one_or_none()
+        booker_name = f"{booker.first_name} {booker.last_name}" if booker else "Unknown User"
+
         log = FacilityLog(
             facility_id=booking.facility_id,
             action="Booking Completed",
-            details=f"Booking completion confirmed for {facility_name}",
+            details=f"Booking completion confirmed for {facility_name} by {booker_name}",
             user_email=current_user["email"],
             created_at=get_philippine_time()
         )
@@ -921,10 +936,15 @@ async def dismiss_booking_completion(
             facility = facility_result.scalar_one_or_none()
             facility_name = facility.facility_name if facility else "Facility"
 
+            # Get booker info
+            user_result = await db.execute(select(User).where(User.id == booking.bookers_id))
+            booker = user_result.scalar_one_or_none()
+            booker_name = f"{booker.first_name} {booker.last_name}" if booker else "Unknown User"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action="Booking Completion Dismissed",
-                details=f"Booking completion dismissed for {facility_name}",
+                details=f"Booking completion dismissed for {facility_name} by {booker_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
