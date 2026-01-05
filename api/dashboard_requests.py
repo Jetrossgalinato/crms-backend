@@ -311,11 +311,16 @@ async def bulk_update_borrowing_status(
             )
             equipment = equipment_result.scalar_one_or_none()
             
+            # Get borrower info
+            user_result = await db.execute(select(User).where(User.id == borrowing.borrowers_id))
+            borrower = user_result.scalar_one_or_none()
+            borrower_name = f"{borrower.first_name} {borrower.last_name}" if borrower else "Unknown User"
+            
             if equipment:
                 log = EquipmentLog(
                     equipment_id=equipment.id,
                     action=f"Borrowing {request.status}",
-                    details=f"Borrowing request {request.status.lower()} for {equipment.name}",
+                    details=f"Borrowing request {request.status.lower()} for {equipment.name} by {borrower_name}",
                     user_email=current_user["email"],
                     created_at=get_philippine_time()
                 )
@@ -378,10 +383,15 @@ async def bulk_delete_borrowing_requests(
             equipment = equipment_result.scalar_one_or_none()
             equipment_name = equipment.name if equipment else "Equipment"
 
+            # Get borrower info
+            user_result = await db.execute(select(User).where(User.id == borrowing.borrowers_id))
+            borrower = user_result.scalar_one_or_none()
+            borrower_name = f"{borrower.first_name} {borrower.last_name}" if borrower else "Unknown User"
+
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Borrowing Deleted",
-                details=f"Borrowing request deleted for {equipment_name}",
+                details=f"Borrowing request deleted for {equipment_name} by {borrower_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -461,10 +471,15 @@ async def confirm_equipment_return(
         equipment = equipment_result.scalar_one_or_none()
         equipment_name = equipment.name if equipment else "Equipment"
 
+        # Get borrower info
+        user_result = await db.execute(select(User).where(User.id == borrowing.borrowers_id))
+        borrower = user_result.scalar_one_or_none()
+        borrower_name = f"{borrower.first_name} {borrower.last_name}" if borrower else "Unknown User"
+
         log = EquipmentLog(
             equipment_id=borrowing.borrowed_item,
             action="Return Confirmed",
-            details=f"Equipment return confirmed for {equipment_name}",
+            details=f"Equipment return confirmed for {equipment_name} by {borrower_name}",
             user_email=current_user["email"],
             created_at=get_philippine_time()
         )
@@ -529,10 +544,15 @@ async def reject_equipment_return(
             equipment = equipment_result.scalar_one_or_none()
             equipment_name = equipment.name if equipment else "Equipment"
 
+            # Get borrower info
+            user_result = await db.execute(select(User).where(User.id == borrowing.borrowers_id))
+            borrower = user_result.scalar_one_or_none()
+            borrower_name = f"{borrower.first_name} {borrower.last_name}" if borrower else "Unknown User"
+
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Return Rejected",
-                details=f"Equipment return rejected for {equipment_name}",
+                details=f"Equipment return rejected for {equipment_name} by {borrower_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
