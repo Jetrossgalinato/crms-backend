@@ -320,8 +320,13 @@ async def mark_booking_done(
 ):
     """Mark booking as done - creates done notification for admin"""
     try:
-        # Get user ID
-        user_id = await get_user_id_from_email(current_user["email"], db)
+        # Get user ID and details
+        result = await db.execute(select(User).where(User.email == current_user["email"]))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = user.id
+        user_full_name = f"{user.first_name} {user.last_name}"
         
         # Validate all booking IDs belong to user
         for booking_id in request.booking_ids:
@@ -345,8 +350,8 @@ async def mark_booking_done(
             done_notif = DoneNotification(
                 booking_id=booking_id,
                 completion_notes=notes,
-                status="pending_confirmation",
-                message=f"Booking completed by {current_user['email']}",
+                status="Pending",
+                message=f"Booking completed by {user_full_name}",
                 created_at=get_philippine_time()
             )
             db.add(done_notif)
@@ -355,7 +360,7 @@ async def mark_booking_done(
             admin_notification = Notification(
                 user_id=1,  # Admin user ID
                 title="Booking Completion Notification",
-                message=f"User {current_user['email']} marked booking as done. Notes: {notes}",
+                message=f"User {user_full_name} marked booking as done. Notes: {notes}",
                 type="info",
                 is_read=False,
                 created_at=get_philippine_time()

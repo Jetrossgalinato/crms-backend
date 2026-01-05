@@ -642,7 +642,7 @@ async def get_done_notifications(
             .join(Booking, DoneNotification.booking_id == Booking.id)
             .join(Facility, Booking.facility_id == Facility.facility_id)
             .join(User, Booking.bookers_id == User.id)
-            .where(DoneNotification.status == "pending_confirmation")
+            .where(DoneNotification.status == "Pending")
             .order_by(DoneNotification.created_at.desc())
         )
         

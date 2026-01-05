@@ -184,7 +184,7 @@ class DoneNotification(Base):
     id = Column(Integer, primary_key=True, index=True)
     booking_id = Column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False)
     completion_notes = Column(String, nullable=True)
-    status = Column(String, nullable=False, default="pending_confirmation")  # pending_confirmation, confirmed, dismissed
+    status = Column(String, nullable=False, default="Pending")  # Pending, confirmed, dismissed
     message = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
