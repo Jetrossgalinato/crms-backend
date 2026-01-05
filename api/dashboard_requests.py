@@ -239,7 +239,7 @@ async def get_return_notifications(
             .join(Borrowing, ReturnNotification.borrowing_id == Borrowing.id)
             .join(Equipment, Borrowing.borrowed_item == Equipment.id)
             .join(User, Borrowing.borrowers_id == User.id)
-            .where(ReturnNotification.status == "pending_confirmation")
+            .where(ReturnNotification.status == "Pending")
             .order_by(ReturnNotification.created_at.desc())
         )
         

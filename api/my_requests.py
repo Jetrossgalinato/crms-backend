@@ -252,8 +252,13 @@ async def mark_borrowing_returned(
         if not request.receiver_name or not request.receiver_name.strip():
             raise HTTPException(status_code=400, detail="receiver_name is required")
         
-        # Get user ID
-        user_id = await get_user_id_from_email(current_user["email"], db)
+        # Get user ID and details
+        result = await db.execute(select(User).where(User.email == current_user["email"]))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = user.id
+        user_full_name = f"{user.first_name} {user.last_name}"
         
         # Validate all borrowing IDs belong to user
         for borrowing_id in request.borrowing_ids:
@@ -276,8 +281,8 @@ async def mark_borrowing_returned(
             return_notif = ReturnNotification(
                 borrowing_id=borrowing_id,
                 receiver_name=request.receiver_name.strip(),
-                status="pending_confirmation",
-                message=f"Equipment returned by {current_user['email']}",
+                status="Pending",
+                message=f"Equipment returned by {user_full_name}",
                 created_at=get_philippine_time()
             )
             db.add(return_notif)
@@ -286,7 +291,7 @@ async def mark_borrowing_returned(
             admin_notification = Notification(
                 user_id=1,  # Admin user ID
                 title="Equipment Return Notification",
-                message=f"User {current_user['email']} reported equipment return. Receiver: {request.receiver_name}",
+                message=f"User {user_full_name} reported equipment return. Receiver: {request.receiver_name}",
                 type="info",
                 is_read=False,
                 created_at=get_philippine_time()
