@@ -239,7 +239,7 @@ async def get_return_notifications(
             .join(Borrowing, ReturnNotification.borrowing_id == Borrowing.id)
             .join(Equipment, Borrowing.borrowed_item == Equipment.id)
             .join(User, Borrowing.borrowers_id == User.id)
-            .where(ReturnNotification.status == "pending_confirmation")
+            .where(ReturnNotification.status == "Pending")
             .order_by(ReturnNotification.created_at.desc())
         )
         
@@ -311,11 +311,16 @@ async def bulk_update_borrowing_status(
             )
             equipment = equipment_result.scalar_one_or_none()
             
+            # Get borrower info
+            user_result = await db.execute(select(User).where(User.id == borrowing.borrowers_id))
+            borrower = user_result.scalar_one_or_none()
+            borrower_name = f"{borrower.first_name} {borrower.last_name}" if borrower else "Unknown User"
+            
             if equipment:
                 log = EquipmentLog(
                     equipment_id=equipment.id,
                     action=f"Borrowing {request.status}",
-                    details=f"Borrowing request {request.status.lower()} for {equipment.name}",
+                    details=f"Borrowing request {request.status.lower()} for {equipment.name} by {borrower_name}",
                     user_email=current_user["email"],
                     created_at=get_philippine_time()
                 )
@@ -378,10 +383,15 @@ async def bulk_delete_borrowing_requests(
             equipment = equipment_result.scalar_one_or_none()
             equipment_name = equipment.name if equipment else "Equipment"
 
+            # Get borrower info
+            user_result = await db.execute(select(User).where(User.id == borrowing.borrowers_id))
+            borrower = user_result.scalar_one_or_none()
+            borrower_name = f"{borrower.first_name} {borrower.last_name}" if borrower else "Unknown User"
+
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Borrowing Deleted",
-                details=f"Borrowing request deleted for {equipment_name}",
+                details=f"Borrowing request deleted for {equipment_name} by {borrower_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -461,10 +471,15 @@ async def confirm_equipment_return(
         equipment = equipment_result.scalar_one_or_none()
         equipment_name = equipment.name if equipment else "Equipment"
 
+        # Get borrower info
+        user_result = await db.execute(select(User).where(User.id == borrowing.borrowers_id))
+        borrower = user_result.scalar_one_or_none()
+        borrower_name = f"{borrower.first_name} {borrower.last_name}" if borrower else "Unknown User"
+
         log = EquipmentLog(
             equipment_id=borrowing.borrowed_item,
             action="Return Confirmed",
-            details=f"Equipment return confirmed for {equipment_name}",
+            details=f"Equipment return confirmed for {equipment_name} by {borrower_name}",
             user_email=current_user["email"],
             created_at=get_philippine_time()
         )
@@ -529,10 +544,15 @@ async def reject_equipment_return(
             equipment = equipment_result.scalar_one_or_none()
             equipment_name = equipment.name if equipment else "Equipment"
 
+            # Get borrower info
+            user_result = await db.execute(select(User).where(User.id == borrowing.borrowers_id))
+            borrower = user_result.scalar_one_or_none()
+            borrower_name = f"{borrower.first_name} {borrower.last_name}" if borrower else "Unknown User"
+
             log = EquipmentLog(
                 equipment_id=borrowing.borrowed_item,
                 action="Return Rejected",
-                details=f"Equipment return rejected for {equipment_name}",
+                details=f"Equipment return rejected for {equipment_name} by {borrower_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -622,7 +642,7 @@ async def get_done_notifications(
             .join(Booking, DoneNotification.booking_id == Booking.id)
             .join(Facility, Booking.facility_id == Facility.facility_id)
             .join(User, Booking.bookers_id == User.id)
-            .where(DoneNotification.status == "pending_confirmation")
+            .where(DoneNotification.status == "Pending")
             .order_by(DoneNotification.created_at.desc())
         )
         
@@ -691,10 +711,15 @@ async def bulk_update_booking_status(
             facility = facility_result.scalar_one_or_none()
             facility_name = facility.facility_name if facility else "Facility"
 
+            # Get booker info
+            user_result = await db.execute(select(User).where(User.id == booking.bookers_id))
+            booker = user_result.scalar_one_or_none()
+            booker_name = f"{booker.first_name} {booker.last_name}" if booker else "Unknown User"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action=f"Booking {request.status}",
-                details=f"Booking request {request.status.lower()} for {facility_name}",
+                details=f"Booking request {request.status.lower()} for {facility_name} by {booker_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -752,10 +777,15 @@ async def bulk_delete_booking_requests(
             facility = facility_result.scalar_one_or_none()
             facility_name = facility.facility_name if facility else "Facility"
 
+            # Get booker info
+            user_result = await db.execute(select(User).where(User.id == booking.bookers_id))
+            booker = user_result.scalar_one_or_none()
+            booker_name = f"{booker.first_name} {booker.last_name}" if booker else "Unknown User"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action="Booking Deleted",
-                details=f"Booking request for {facility_name} deleted",
+                details=f"Booking request for {facility_name} deleted by {booker_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -833,10 +863,15 @@ async def confirm_booking_completion(
         facility = facility_result.scalar_one_or_none()
         facility_name = facility.facility_name if facility else "Facility"
 
+        # Get booker info
+        user_result = await db.execute(select(User).where(User.id == booking.bookers_id))
+        booker = user_result.scalar_one_or_none()
+        booker_name = f"{booker.first_name} {booker.last_name}" if booker else "Unknown User"
+
         log = FacilityLog(
             facility_id=booking.facility_id,
             action="Booking Completed",
-            details=f"Booking completion confirmed for {facility_name}",
+            details=f"Booking completion confirmed for {facility_name} by {booker_name}",
             user_email=current_user["email"],
             created_at=get_philippine_time()
         )
@@ -901,10 +936,15 @@ async def dismiss_booking_completion(
             facility = facility_result.scalar_one_or_none()
             facility_name = facility.facility_name if facility else "Facility"
 
+            # Get booker info
+            user_result = await db.execute(select(User).where(User.id == booking.bookers_id))
+            booker = user_result.scalar_one_or_none()
+            booker_name = f"{booker.first_name} {booker.last_name}" if booker else "Unknown User"
+
             log = FacilityLog(
                 facility_id=booking.facility_id,
                 action="Booking Completion Dismissed",
-                details=f"Booking completion dismissed for {facility_name}",
+                details=f"Booking completion dismissed for {facility_name} by {booker_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -1047,10 +1087,15 @@ async def bulk_update_acquiring_status(
             supply = supply_result.scalar_one_or_none()
             supply_name = supply.supply_name if supply else "Supply"
 
+            # Get acquirer info
+            user_result = await db.execute(select(User).where(User.id == acquiring.acquirers_id))
+            acquirer = user_result.scalar_one_or_none()
+            acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
+
             log = SupplyLog(
                 supply_id=acquiring.supply_id,
                 action=f"Acquiring {request.status}",
-                details=f"Acquiring request {request.status.lower()} for {supply_name}, quantity: {acquiring.quantity}",
+                details=f"Acquiring request {request.status.lower()} for {supply_name}, quantity: {acquiring.quantity} by {acquirer_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )
@@ -1108,10 +1153,15 @@ async def bulk_delete_acquiring_requests(
             supply = supply_result.scalar_one_or_none()
             supply_name = supply.supply_name if supply else "Supply"
 
+            # Get acquirer info
+            user_result = await db.execute(select(User).where(User.id == acquiring.acquirers_id))
+            acquirer = user_result.scalar_one_or_none()
+            acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
+
             log = SupplyLog(
                 supply_id=acquiring.supply_id,
                 action="Acquiring Deleted",
-                details=f"Acquiring request deleted for {supply_name}",
+                details=f"Acquiring request deleted for {supply_name} by {acquirer_name}",
                 user_email=current_user["email"],
                 created_at=get_philippine_time()
             )

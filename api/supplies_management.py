@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
-from database import get_db, Supply, Facility, SupplyLog
+from database import get_db, Supply, Facility, SupplyLog, User
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -519,8 +519,15 @@ async def get_supply_logs(
                 if supply:
                     supply_name = supply.supply_name
             
-            # Construct log_message based on action and details
-            user_identifier = log.user_email.split("@")[0] if log.user_email else "User"
+            # Get admin info
+            user_identifier = "Unknown Admin"
+            if log.user_email:
+                user_result = await db.execute(select(User).where(User.email == log.user_email))
+                user = user_result.scalar_one_or_none()
+                if user:
+                    user_identifier = f"{user.first_name} {user.last_name}"
+                else:
+                    user_identifier = log.user_email.split("@")[0]
             
             # Try to extract supply name from details if it contains it
             # Details format is often: "supply_name: Category: X, Quantity: Y"

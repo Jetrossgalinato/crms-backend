@@ -175,7 +175,7 @@ class ReturnNotification(Base):
     id = Column(Integer, primary_key=True, index=True)
     borrowing_id = Column(Integer, ForeignKey("borrowing.id", ondelete="CASCADE"), nullable=False)
     receiver_name = Column(String, nullable=False)
-    status = Column(String, nullable=False, default="pending_confirmation")  # pending_confirmation, confirmed, rejected
+    status = Column(String, nullable=False, default="Pending")  # Pending, confirmed, rejected
     message = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=get_ph_time)
 
@@ -184,7 +184,7 @@ class DoneNotification(Base):
     id = Column(Integer, primary_key=True, index=True)
     booking_id = Column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False)
     completion_notes = Column(String, nullable=True)
-    status = Column(String, nullable=False, default="pending_confirmation")  # pending_confirmation, confirmed, dismissed
+    status = Column(String, nullable=False, default="Pending")  # Pending, confirmed, dismissed
     message = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=get_ph_time)
 

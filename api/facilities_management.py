@@ -555,7 +555,16 @@ async def get_facility_logs(
                     facility_name = facility.facility_name
             
             # Construct log_message based on action and details
-            user_identifier = log.user_email.split("@")[0] if log.user_email else "User"
+            
+            # Get admin user info
+            admin_user = None
+            if log.user_email:
+                admin_result = await db.execute(
+                    select(User).where(User.email == log.user_email)
+                )
+                admin_user = admin_result.scalar_one_or_none()
+            
+            user_identifier = f"{admin_user.first_name} {admin_user.last_name}" if admin_user else (log.user_email.split("@")[0] if log.user_email else "User")
             
             # If details already contains a complete message, use it directly
             # Otherwise format it with action and facility name
