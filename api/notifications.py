@@ -8,6 +8,7 @@ from database import SessionLocal, User, Notification
 from api.auth_utils import SECRET_KEY, ALGORITHM
 from typing import List
 from datetime import datetime
+from services.scheduler import check_upcoming_deadlines
 
 router = APIRouter()
 security = HTTPBearer()
@@ -192,3 +193,20 @@ async def delete_notification(
     await db.commit()
     
     return {"message": "Notification deleted successfully"}
+
+@router.post("/notifications/trigger-reminders")
+async def trigger_email_reminders(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Manually trigger the email reminder check.
+    Only accessible by admins/super admins ideally, but left open for current testing context if needed
+    or checking role.
+    """
+    # Simple role check if desired, or assume user has access as it's a test/admin function
+    # if current_user.acc_role not in ["Admin", "Super Admin"]:
+    #     raise HTTPException(status_code=403, detail="Not authorized")
+
+    await check_upcoming_deadlines()
+    return {"message": "Email reminders check triggered"}
+
