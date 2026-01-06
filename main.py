@@ -33,7 +33,19 @@ from fastapi.responses import JSONResponse
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+from contextlib import asynccontextmanager
+from services.scheduler import start_scheduler
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start the scheduler on startup
+    scheduler = start_scheduler()
+    yield
+    # Shutdown logic if needed
+    if scheduler.running:
+        scheduler.shutdown()
+
+app = FastAPI(lifespan=lifespan)
 
 # Global Exception Handler
 @app.exception_handler(Exception)
