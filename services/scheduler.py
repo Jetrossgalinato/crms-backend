@@ -57,7 +57,7 @@ async def check_upcoming_deadlines():
             ).outerjoin(
                 Facility, Booking.facility_id == Facility.facility_id
             ).where(
-                Booking.status == 'Approved'
+                Booking.status == 'Approved' # Only process approved bookings
             )
             
             booking_results = await db.execute(booking_query)
@@ -94,7 +94,7 @@ async def check_upcoming_deadlines():
                 Equipment, Borrowing.borrowed_item == Equipment.id
             ).where(
                 and_(
-                    Borrowing.request_status == 'Approved',
+                    Borrowing.request_status == 'Approved', # Only process approved borrowings
                     or_(Borrowing.return_status == None, Borrowing.return_status != 'Returned')
                 )
             )
@@ -140,7 +140,7 @@ async def check_overdue_deadlines():
             ).outerjoin(
                 Facility, Booking.facility_id == Facility.facility_id
             ).where(
-                Booking.status == 'Approved'
+                Booking.status == 'Approved' # Only process approved bookings
             )
             
             booking_results = await db.execute(booking_query)
@@ -172,7 +172,7 @@ async def check_overdue_deadlines():
                 Equipment, Borrowing.borrowed_item == Equipment.id
             ).where(
                 and_(
-                    Borrowing.request_status == 'Approved',
+                    Borrowing.request_status == 'Approved', # Only process approved borrowings
                     or_(Borrowing.return_status == None, Borrowing.return_status != 'Returned')
                 )
             )
