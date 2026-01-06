@@ -152,24 +152,12 @@ async def get_my_booking_requests(
         # Format response
         data = []
         for booking, facility in bookings:
-            # Extract time from date if it includes time, otherwise use default times
-            start_time = "09:00"
-            end_time = "17:00"
-            booking_date = booking.start_date
-            
-            # If start_date contains time info (e.g., "2024-01-20 09:00"), split it
-            if booking.start_date and " " in booking.start_date:
-                booking_date, start_time = booking.start_date.split(" ", 1)
-            if booking.end_date and " " in booking.end_date:
-                _, end_time = booking.end_date.split(" ", 1)
-            
             data.append({
                 "id": booking.id,
                 "status": booking.status or "Pending",
                 "facility_name": facility.facility_name,
-                "booking_date": booking_date,
-                "start_time": start_time,
-                "end_time": end_time,
+                "start_date": booking.start_date,
+                "end_date": booking.end_date,
                 "purpose": booking.purpose
             })
         
