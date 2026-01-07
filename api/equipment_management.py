@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, func
-from database import get_db, Equipment, Facility, User, EquipmentLog
+from sqlalchemy import select, delete, func, or_
+from database import get_db, Equipment, Facility, User, EquipmentLog, Borrowing
 from pydantic import BaseModel
 from jose import JWTError, jwt
 from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
@@ -113,6 +113,15 @@ async def get_all_equipments(
         )
         equipments = result.scalars().all()
         
+        # Get ids of currently borrowed items
+        borrowing_result = await db.execute(
+            select(Borrowing.borrowed_item).where(
+                Borrowing.request_status == "Approved",
+                or_(Borrowing.return_status == None, Borrowing.return_status != "Returned")
+            )
+        )
+        borrowed_ids = set(borrowing_result.scalars().all())
+        
         return [
             {
                 "id": eq.id,
@@ -123,7 +132,7 @@ async def get_all_equipments(
                 "description": eq.description,
                 "category": eq.category,
                 "status": eq.status,
-                "availability": "Available",  # Default, can be calculated based on borrowing
+                "availability": "Borrowed" if eq.id in borrowed_ids else "Available",
                 "date_acquire": eq.date_acquire,
                 "supplier": eq.supplier,
                 "amount": eq.amount,
