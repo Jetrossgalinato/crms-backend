@@ -484,6 +484,7 @@ async def create_equipment_log(
 async def get_equipment_logs(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
+    search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
@@ -492,8 +493,30 @@ async def get_equipment_logs(
     Returns logs with formatted log_message field for frontend display
     """
     try:
+        # Base conditions
+        conditions = []
+        if search:
+            search_pattern = f"%{search}%"
+            conditions.append(
+                or_(
+                    EquipmentLog.action.ilike(search_pattern),
+                    EquipmentLog.details.ilike(search_pattern),
+                    EquipmentLog.user_email.ilike(search_pattern),
+                    Equipment.name.ilike(search_pattern),
+                    User.first_name.ilike(search_pattern),
+                    User.last_name.ilike(search_pattern)
+                )
+            )
+        
         # Get total count
-        count_result = await db.execute(select(func.count(EquipmentLog.id)))
+        count_query = select(func.count(EquipmentLog.id))
+        if search:
+             count_query = count_query.outerjoin(Equipment, EquipmentLog.equipment_id == Equipment.id)
+             count_query = count_query.outerjoin(User, EquipmentLog.user_email == User.email)
+             for condition in conditions:
+                 count_query = count_query.where(condition)
+
+        count_result = await db.execute(count_query)
         total_count = count_result.scalar() or 0
         
         # Calculate pagination
@@ -501,8 +524,15 @@ async def get_equipment_logs(
         offset = (page - 1) * limit
         
         # Get logs with pagination
+        query = select(EquipmentLog)
+        if search:
+            query = query.outerjoin(Equipment, EquipmentLog.equipment_id == Equipment.id)
+            query = query.outerjoin(User, EquipmentLog.user_email == User.email)
+            for condition in conditions:
+                query = query.where(condition)
+
         query = (
-            select(EquipmentLog)
+            query
             .order_by(EquipmentLog.created_at.desc())
             .limit(limit)
             .offset(offset)

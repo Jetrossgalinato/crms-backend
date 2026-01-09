@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, Form, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete, func, or_
 from database import get_db, Facility, FacilityLog, User
 from pydantic import BaseModel
 from typing import Optional, List
@@ -514,6 +514,7 @@ async def create_facility_log(
 async def get_facility_logs(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
+    search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
@@ -522,8 +523,30 @@ async def get_facility_logs(
     Returns logs with formatted log_message field for frontend display
     """
     try:
+        # Base conditions
+        conditions = []
+        if search:
+            search_pattern = f"%{search}%"
+            conditions.append(
+                or_(
+                    FacilityLog.action.ilike(search_pattern),
+                    FacilityLog.details.ilike(search_pattern),
+                    FacilityLog.user_email.ilike(search_pattern),
+                    Facility.facility_name.ilike(search_pattern),
+                    User.first_name.ilike(search_pattern),
+                    User.last_name.ilike(search_pattern)
+                )
+            )
+
         # Get total count
-        count_result = await db.execute(select(func.count(FacilityLog.id)))
+        count_query = select(func.count(FacilityLog.id))
+        if search:
+             count_query = count_query.outerjoin(Facility, FacilityLog.facility_id == Facility.facility_id)
+             count_query = count_query.outerjoin(User, FacilityLog.user_email == User.email)
+             for condition in conditions:
+                 count_query = count_query.where(condition)
+
+        count_result = await db.execute(count_query)
         total_count = count_result.scalar() or 0
         
         # Calculate pagination
@@ -531,8 +554,15 @@ async def get_facility_logs(
         offset = (page - 1) * limit
         
         # Get logs with pagination
+        query = select(FacilityLog)
+        if search:
+            query = query.outerjoin(Facility, FacilityLog.facility_id == Facility.facility_id)
+            query = query.outerjoin(User, FacilityLog.user_email == User.email)
+            for condition in conditions:
+                query = query.where(condition)
+
         query = (
-            select(FacilityLog)
+            query
             .order_by(FacilityLog.created_at.desc())
             .limit(limit)
             .offset(offset)
