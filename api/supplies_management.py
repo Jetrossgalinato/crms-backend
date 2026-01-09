@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete, func, or_
 from database import get_db, Supply, Facility, SupplyLog, User
 from pydantic import BaseModel
 from typing import Optional, List
@@ -479,6 +479,7 @@ async def log_supply_action(
 async def get_supply_logs(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
+    search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
@@ -487,8 +488,30 @@ async def get_supply_logs(
     Returns logs with formatted log_message field for frontend display
     """
     try:
+        # Base conditions
+        conditions = []
+        if search:
+            search_pattern = f"%{search}%"
+            conditions.append(
+                or_(
+                    SupplyLog.action.ilike(search_pattern),
+                    SupplyLog.details.ilike(search_pattern),
+                    SupplyLog.user_email.ilike(search_pattern),
+                    Supply.supply_name.ilike(search_pattern),
+                    User.first_name.ilike(search_pattern),
+                    User.last_name.ilike(search_pattern)
+                )
+            )
+
         # Get total count
-        count_result = await db.execute(select(func.count(SupplyLog.id)))
+        count_query = select(func.count(SupplyLog.id))
+        if search:
+             count_query = count_query.outerjoin(Supply, SupplyLog.supply_id == Supply.supply_id)
+             count_query = count_query.outerjoin(User, SupplyLog.user_email == User.email)
+             for condition in conditions:
+                 count_query = count_query.where(condition)
+        
+        count_result = await db.execute(count_query)
         total_count = count_result.scalar() or 0
         
         # Calculate pagination
@@ -496,8 +519,15 @@ async def get_supply_logs(
         offset = (page - 1) * limit
         
         # Get logs with pagination
+        query = select(SupplyLog)
+        if search:
+            query = query.outerjoin(Supply, SupplyLog.supply_id == Supply.supply_id)
+            query = query.outerjoin(User, SupplyLog.user_email == User.email)
+            for condition in conditions:
+                query = query.where(condition)
+
         query = (
-            select(SupplyLog)
+            query
             .order_by(SupplyLog.created_at.desc())
             .limit(limit)
             .offset(offset)
