@@ -432,7 +432,11 @@ async def bulk_import_facilities(
                 facility_type=facility_data.facility_type,
                 floor_level=facility_data.floor_level,
                 capacity=facility_data.capacity,
+                connection_type=facility_data.connection_type,
+                cooling_tools=facility_data.cooling_tools,
+                building=facility_data.building,
                 description=facility_data.description,
+                remarks=facility_data.remarks,
                 status=facility_data.status,
                 created_at=get_philippine_time()
             )
