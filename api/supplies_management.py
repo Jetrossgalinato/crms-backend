@@ -478,7 +478,7 @@ async def log_supply_action(
 @router.get("/supplies/logs")
 async def get_supply_logs(
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=10000),
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)

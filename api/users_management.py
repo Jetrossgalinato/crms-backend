@@ -72,6 +72,7 @@ async def get_users(
     limit: int = Query(10, ge=1, le=100),
     department: Optional[str] = None,
     role: Optional[str] = None,
+    search: Optional[str] = None,
     exclude_user_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
@@ -81,7 +82,7 @@ async def get_users(
     
     Excludes the current authenticated user from results.
     Shows ALL users from users table, with optional account_requests data.
-    Filters can be applied for department and role.
+    Filters can be applied for department, role, and generic search.
     """
     try:
         # Get current user's ID from JWT token
@@ -135,6 +136,18 @@ async def get_users(
                     AccountRequest.approved_acc_role.ilike(f"%{role}%")
                 )
             )
+
+        # Apply search filter (first_name, last_name, email, department)
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.where(
+                or_(
+                    User.first_name.ilike(search_pattern),
+                    User.last_name.ilike(search_pattern),
+                    User.email.ilike(search_pattern),
+                    User.department.ilike(search_pattern)
+                )
+            )
         
         # Get total count - use same filters as main query
         count_query = (
@@ -166,6 +179,17 @@ async def get_users(
                 or_(
                     User.acc_role.ilike(f"%{role}%"),
                     AccountRequest.approved_acc_role.ilike(f"%{role}%")
+                )
+            )
+
+        if search:
+            search_pattern = f"%{search}%"
+            count_query = count_query.where(
+                or_(
+                    User.first_name.ilike(search_pattern),
+                    User.last_name.ilike(search_pattern),
+                    User.email.ilike(search_pattern),
+                    User.department.ilike(search_pattern)
                 )
             )
         
