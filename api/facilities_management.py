@@ -517,7 +517,7 @@ async def create_facility_log(
 @router.get("/facilities/logs")
 async def get_facility_logs(
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=10000),
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(verify_token)
