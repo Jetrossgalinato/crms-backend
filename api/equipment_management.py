@@ -99,6 +99,44 @@ class EquipmentLogCreate(BaseModel):
     equipment_name: Optional[str] = None
     details: Optional[str] = None
 
+@router.get("/equipments/{equipment_id}/history")
+async def get_equipment_history(
+    equipment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(verify_token)
+):
+    """
+    Get borrowing history for a specific equipment
+    """
+    try:
+        # Join with User to get borrower name
+        query = (
+            select(Borrowing, User)
+            .join(User, Borrowing.borrowers_id == User.id)
+            .where(Borrowing.borrowed_item == equipment_id)
+            .order_by(Borrowing.created_at.desc())
+        )
+        
+        result = await db.execute(query)
+        borrowings = result.all()
+        
+        return [
+            {
+                "id": borrowing.id,
+                "borrower_name": f"{user.first_name} {user.last_name}",
+                "purpose": borrowing.purpose,
+                "start_date": borrowing.start_date,
+                "end_date": borrowing.end_date,
+                "return_date": borrowing.return_date if borrowing.return_status == "Returned" else None,
+                "request_status": borrowing.request_status,
+                "return_status": borrowing.return_status,
+                "created_at": borrowing.created_at.isoformat() if borrowing.created_at else None,
+            }
+            for borrowing, user in borrowings
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching equipment history: {str(e)}")
+
 @router.get("/equipments")
 async def get_all_equipments(
     db: AsyncSession = Depends(get_db),

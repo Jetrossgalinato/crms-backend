@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func, or_
-from database import get_db, Supply, Facility, SupplyLog, User
+from database import get_db, Supply, Facility, SupplyLog, User, Acquiring
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -175,6 +175,59 @@ async def get_all_facilities(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching facilities: {str(e)}")
+
+@router.get("/supplies/{supply_id}/history")
+async def get_supply_history(
+    supply_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(verify_token)
+):
+    """Get history of requests for a specific supply"""
+    try:
+        # Debug logging
+        print(f"Fetching history for supply_id: {supply_id}")
+        
+        query = (
+            select(Acquiring, User)
+            .join(User, Acquiring.acquirers_id == User.id)
+            .where(Acquiring.supply_id == supply_id)
+            .order_by(Acquiring.created_at.desc())
+        )
+        
+        result = await db.execute(query)
+        records = result.all()
+        
+        print(f"Found {len(records)} records")
+
+        history = []
+        for acquiring, user in records:
+            request_date = "N/A"
+            try:
+                if acquiring.created_at:
+                    if hasattr(acquiring.created_at, 'strftime'):
+                        request_date = acquiring.created_at.strftime("%Y-%m-%d %H:%M")
+                    else:
+                        # Parse string if necessary or just use the string
+                        request_date = str(acquiring.created_at)
+            except Exception as e:
+                print(f"Error formatting date: {e}")
+                request_date = str(acquiring.created_at)
+
+            history.append({
+                "id": acquiring.id,
+                "borrower_name": f"{user.first_name} {user.last_name}",
+                "purpose": acquiring.purpose,
+                "request_date": request_date,
+                "quantity": acquiring.quantity,
+                "request_status": acquiring.status
+            })
+            
+        return history
+    
+    except Exception as e:
+        print(f"CRITICAL ERROR in get_supply_history: {type(e).__name__}: {str(e)}")
+        # Return empty list instead of 500 to prevent UI crash, but log error
+        return []
 
 @router.post("/supplies/upload-image")
 async def upload_supply_image(

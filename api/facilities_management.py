@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, Form, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func, or_
-from database import get_db, Facility, FacilityLog, User
+from database import get_db, Facility, FacilityLog, User, Booking
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -132,6 +132,47 @@ async def get_all_facilities(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching facilities: {str(e)}")
+
+@router.get("/facilities/{facility_id}/history")
+async def get_facility_history(
+    facility_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(verify_token)
+):
+    """
+    Get booking history for a specific facility
+    """
+    try:
+        # Join with User to get booker name
+        query = (
+            select(Booking, User)
+            .join(User, Booking.bookers_id == User.id)
+            .where(
+                Booking.facility_id == facility_id,
+                Booking.request_type == 'Facility'
+            )
+            .order_by(Booking.created_at.desc())
+        )
+        
+        result = await db.execute(query)
+        bookings = result.all()
+        
+        return [
+            {
+                "id": booking.id,
+                "borrower_name": f"{user.first_name} {user.last_name}",
+                "purpose": booking.purpose,
+                "start_date": booking.start_date,
+                "end_date": booking.end_date,
+                "return_date": booking.return_date if booking.status == "Released" else None, # Facility doesn't really have "Return", but maybe "Released" or "Done"
+                "request_status": booking.status,
+                "return_status": "Released" if booking.status == "Released" else "-", # Mapping similar concept
+                "created_at": booking.created_at.isoformat() if booking.created_at else None,
+            }
+            for booking, user in bookings
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching facility history: {str(e)}")
 
 @router.post("/facilities")
 async def create_facility_json(
