@@ -127,7 +127,7 @@ async def get_equipment_history(
                 "purpose": borrowing.purpose,
                 "start_date": borrowing.start_date,
                 "end_date": borrowing.end_date,
-                "return_date": borrowing.return_date,
+                "return_date": borrowing.return_date if borrowing.return_status == "Returned" else None,
                 "request_status": borrowing.request_status,
                 "return_status": borrowing.return_status,
                 "created_at": borrowing.created_at.isoformat() if borrowing.created_at else None,
