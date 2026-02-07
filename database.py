@@ -129,6 +129,7 @@ class Equipment(Base):
     remarks = Column(String, nullable=True)
     updated_at = Column(DateTime, nullable=True)
     image = Column(String, nullable=True)
+    availability = Column(String, nullable=True, default="Available")
 
 class Borrowing(Base):
     __tablename__ = "borrowing"
