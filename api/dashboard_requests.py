@@ -164,8 +164,12 @@ async def get_borrowing_requests(
 ):
     """Get paginated borrowing requests with equipment and borrower details"""
     try:
-        # Get total count
-        count_result = await db.execute(select(func.count(Borrowing.id)))
+        # Get total count (using same JOINs as data query to avoid phantom pages)
+        count_result = await db.execute(
+            select(func.count(Borrowing.id))
+            .join(Equipment, Borrowing.borrowed_item == Equipment.id)
+            .join(User, Borrowing.borrowers_id == User.id)
+        )
         total = count_result.scalar() or 0
         
         # Calculate pagination
@@ -583,8 +587,12 @@ async def get_booking_requests(
 ):
     """Get paginated booking requests with facility and booker details"""
     try:
-        # Get total count
-        count_result = await db.execute(select(func.count(Booking.id)))
+        # Get total count (using same JOINs as data query to avoid phantom pages)
+        count_result = await db.execute(
+            select(func.count(Booking.id))
+            .join(Facility, Booking.facility_id == Facility.facility_id)
+            .join(User, Booking.bookers_id == User.id)
+        )
         total = count_result.scalar() or 0
         
         # Calculate pagination
@@ -975,8 +983,12 @@ async def get_acquiring_requests(
 ):
     """Get paginated acquiring requests with supply and acquirer details"""
     try:
-        # Get total count
-        count_result = await db.execute(select(func.count(Acquiring.id)))
+        # Get total count (using same JOINs as data query to avoid phantom pages)
+        count_result = await db.execute(
+            select(func.count(Acquiring.id))
+            .join(Supply, Acquiring.supply_id == Supply.supply_id)
+            .join(User, Acquiring.acquirers_id == User.id)
+        )
         total = count_result.scalar() or 0
         
         # Calculate pagination
