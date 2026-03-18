@@ -1106,7 +1106,7 @@ async def bulk_update_acquiring_status(
             acquirer = user_result.scalar_one_or_none()
             acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
 
-            log = SupplyLog(
+            log = SupplyLog, AccountRequest(
                 supply_id=acquiring.supply_id,
                 action=f"Acquiring {request.status}",
                 details=f"Acquiring request {request.status.lower()} for {supply_name}, quantity: {acquiring.quantity} by {acquirer_name}",
@@ -1172,7 +1172,7 @@ async def bulk_delete_acquiring_requests(
             acquirer = user_result.scalar_one_or_none()
             acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
 
-            log = SupplyLog(
+            log = SupplyLog, AccountRequest(
                 supply_id=acquiring.supply_id,
                 action="Acquiring Deleted",
                 details=f"Acquiring request deleted for {supply_name} by {acquirer_name}",
@@ -1203,25 +1203,21 @@ async def bulk_delete_acquiring_requests(
 
 
 @router.websocket("/ws/notifications")
-async def websocket_notifications(websocket: WebSocket, token: Optional[str] = Query(None)):
+async def websocket_notifications(websocket: WebSocket, token: str = Query(...)):
     await websocket.accept()
     
     if not token:
-        await websocket.close(code=1008, reason="missing_token")
+        await websocket.close(code=1008)
         return
         
     try:
-        cleaned_token = (token or "").strip().strip('"').strip("'")
-        if cleaned_token.lower().startswith("bearer "):
-            cleaned_token = cleaned_token.split(" ", 1)[1].strip()
-
-        payload = jwt.decode(cleaned_token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
         if not email:
-            await websocket.close(code=1008, reason="missing_sub")
+            await websocket.close(code=1008)
             return
     except JWTError:
-        await websocket.close(code=1008, reason="invalid_token")
+        await websocket.close(code=1008)
         return
 
     try:
@@ -1232,7 +1228,7 @@ async def websocket_notifications(websocket: WebSocket, token: Optional[str] = Q
                 current_user = user_res.scalar_one_or_none()
                 
                 if not current_user:
-                    await websocket.close(code=1008, reason="user_not_found")
+                    await websocket.close(code=1008)
                     return
 
                 # 1. Personal Notifications
@@ -1253,31 +1249,13 @@ async def websocket_notifications(websocket: WebSocket, token: Optional[str] = Q
                     })
 
                 # Admin/Super Admin only data
-                # Normalize roles to avoid mismatches from casing/extra spaces/hyphens.
-                super_admin_role_keys = {
-                    "ccisdean",
-                    "labtechnician",
-                    "comlabadviser",
-                    "superadmin",
-                }
-                admin_role_keys = {
-                    "departmentchairperson",
-                    "associatedean",
-                    "admin",
-                }
-
-                role_key = "".join(
-                    ch for ch in (current_user.acc_role or "").casefold() if ch.isalnum()
-                )
-                is_admin_or_super = (
-                    role_key in admin_role_keys or role_key in super_admin_role_keys
-                )
+                is_admin = current_user.acc_role in ["Admin", "Super Admin"]
                 
                 return_data = []
                 done_data = []
                 pending_requests = []
                 
-                if is_admin_or_super:
+                if is_admin:
                     # 2. Return Notifications
                     return_query = (
                         select(ReturnNotification, Borrowing, Equipment, User)
@@ -1393,7 +1371,7 @@ async def websocket_notifications(websocket: WebSocket, token: Optional[str] = Q
                 
                 # We can also add account_requests for Super Admin
                 account_requests_data = []
-                if role_key in super_admin_role_keys:
+                if current_user.acc_role == "Super Admin":
                     # Pending users
                     pending_users_query = select(AccountRequest).where(AccountRequest.status == "Pending")
                     for p_user in (await db.execute(pending_users_query)).scalars().all():
@@ -1403,8 +1381,7 @@ async def websocket_notifications(websocket: WebSocket, token: Optional[str] = Q
                             "created_at": p_user.created_at.isoformat() if p_user.created_at else None
                         })
 
-                # Prevent cross-iteration Postgres snapshot caching
-                await db.rollback()
+                print("Sending realtime pendingRequests:", len(pending_requests))
                 await websocket.send_json({
                     "personalNotifications": personal_notifs,
                     "returnNotifications": return_data,
@@ -1420,6 +1397,6 @@ async def websocket_notifications(websocket: WebSocket, token: Optional[str] = Q
     except Exception as e:
         print(f"WebSocket error: {e}")
         try:
-            await websocket.close(code=1011, reason="internal_error")
+            await websocket.close(code=1011)
         except:
             pass

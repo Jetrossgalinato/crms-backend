@@ -222,13 +222,13 @@ async def create_borrowing_request(
     # Create borrowing record
     new_borrowing = Borrowing(
         borrowed_item=borrowing.borrowed_item,
-        borrowers_id=borrowing.borrowers_id,
+        borrowers_id=current_user.id,
         purpose=borrowing.purpose,
         start_date=borrowing.start_date,
         end_date=borrowing.end_date,
         return_date=borrowing.return_date,
-        request_status=borrowing.request_status,
-        availability=borrowing.availability,
+        request_status="Pending",
+        availability="Available",
         created_at=get_philippine_time()
     )
     
