@@ -1211,7 +1211,11 @@ async def websocket_notifications(websocket: WebSocket, token: str = Query(...))
         return
         
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        cleaned_token = (token or "").strip().strip('"').strip("'")
+        if cleaned_token.lower().startswith("bearer "):
+            cleaned_token = cleaned_token.split(" ", 1)[1].strip()
+
+        payload = jwt.decode(cleaned_token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
         if not email:
             await websocket.close(code=1008)
