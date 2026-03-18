@@ -1249,16 +1249,13 @@ async def websocket_notifications(websocket: WebSocket, token: str = Query(...))
                     })
 
                 # Admin/Super Admin only data
-                super_admin_roles = ["CCIS Dean", "Lab Technician", "Comlab Adviser", "Super Admin"]
-                admin_roles = ["Department Chairperson", "Associate Dean", "Admin"]
-                
-                is_admin_or_super = current_user.acc_role in admin_roles or current_user.acc_role in super_admin_roles
+                is_admin = current_user.acc_role in ["Admin", "Super Admin"]
                 
                 return_data = []
                 done_data = []
                 pending_requests = []
                 
-                if is_admin_or_super:
+                if is_admin:
                     # 2. Return Notifications
                     return_query = (
                         select(ReturnNotification, Borrowing, Equipment, User)
@@ -1374,7 +1371,7 @@ async def websocket_notifications(websocket: WebSocket, token: str = Query(...))
                 
                 # We can also add account_requests for Super Admin
                 account_requests_data = []
-                if current_user.acc_role in super_admin_roles:
+                if current_user.acc_role == "Super Admin":
                     # Pending users
                     pending_users_query = select(AccountRequest).where(AccountRequest.status == "Pending")
                     for p_user in (await db.execute(pending_users_query)).scalars().all():
@@ -1384,8 +1381,7 @@ async def websocket_notifications(websocket: WebSocket, token: str = Query(...))
                             "created_at": p_user.created_at.isoformat() if p_user.created_at else None
                         })
 
-                # Prevent cross-iteration Postgres snapshot caching
-                await db.rollback()
+                print("Sending realtime pendingRequests:", len(pending_requests))
                 await websocket.send_json({
                     "personalNotifications": personal_notifs,
                     "returnNotifications": return_data,
