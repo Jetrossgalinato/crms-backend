@@ -1106,7 +1106,7 @@ async def bulk_update_acquiring_status(
             acquirer = user_result.scalar_one_or_none()
             acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
 
-            log = SupplyLog, AccountRequest(
+            log = SupplyLog(
                 supply_id=acquiring.supply_id,
                 action=f"Acquiring {request.status}",
                 details=f"Acquiring request {request.status.lower()} for {supply_name}, quantity: {acquiring.quantity} by {acquirer_name}",
@@ -1172,7 +1172,7 @@ async def bulk_delete_acquiring_requests(
             acquirer = user_result.scalar_one_or_none()
             acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
 
-            log = SupplyLog, AccountRequest(
+            log = SupplyLog(
                 supply_id=acquiring.supply_id,
                 action="Acquiring Deleted",
                 details=f"Acquiring request deleted for {supply_name} by {acquirer_name}",
