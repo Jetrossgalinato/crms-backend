@@ -1203,11 +1203,11 @@ async def bulk_delete_acquiring_requests(
 
 
 @router.websocket("/ws/notifications")
-async def websocket_notifications(websocket: WebSocket, token: str = Query(...)):
+async def websocket_notifications(websocket: WebSocket, token: Optional[str] = Query(None)):
     await websocket.accept()
     
     if not token:
-        await websocket.close(code=1008)
+        await websocket.close(code=1008, reason="missing_token")
         return
         
     try:
@@ -1218,10 +1218,10 @@ async def websocket_notifications(websocket: WebSocket, token: str = Query(...))
         payload = jwt.decode(cleaned_token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
         if not email:
-            await websocket.close(code=1008)
+            await websocket.close(code=1008, reason="missing_sub")
             return
     except JWTError:
-        await websocket.close(code=1008)
+        await websocket.close(code=1008, reason="invalid_token")
         return
 
     try:
@@ -1232,7 +1232,7 @@ async def websocket_notifications(websocket: WebSocket, token: str = Query(...))
                 current_user = user_res.scalar_one_or_none()
                 
                 if not current_user:
-                    await websocket.close(code=1008)
+                    await websocket.close(code=1008, reason="user_not_found")
                     return
 
                 # 1. Personal Notifications
@@ -1420,6 +1420,6 @@ async def websocket_notifications(websocket: WebSocket, token: str = Query(...))
     except Exception as e:
         print(f"WebSocket error: {e}")
         try:
-            await websocket.close(code=1011)
+            await websocket.close(code=1011, reason="internal_error")
         except:
             pass
