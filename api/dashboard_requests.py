@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
 from database import (
-    get_db, Borrowing, Booking, Acquiring, Equipment, Facility, Supply, User,
+    get_db, SessionLocal, Borrowing, Booking, Acquiring, Equipment, Facility, Supply, User,
     Notification, ReturnNotification, DoneNotification,
-    EquipmentLog, FacilityLog, SupplyLog
+    EquipmentLog, FacilityLog, SupplyLog, AccountRequest
 )
 from pydantic import BaseModel
 from typing import Optional, List
@@ -12,6 +12,7 @@ from datetime import datetime
 from jose import JWTError, jwt
 from api.auth_utils import SECRET_KEY, ALGORITHM, get_philippine_time
 import math
+import asyncio
 
 router = APIRouter()
 
@@ -1105,7 +1106,7 @@ async def bulk_update_acquiring_status(
             acquirer = user_result.scalar_one_or_none()
             acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
 
-            log = SupplyLog(
+            log = SupplyLog, AccountRequest(
                 supply_id=acquiring.supply_id,
                 action=f"Acquiring {request.status}",
                 details=f"Acquiring request {request.status.lower()} for {supply_name}, quantity: {acquiring.quantity} by {acquirer_name}",
@@ -1171,7 +1172,7 @@ async def bulk_delete_acquiring_requests(
             acquirer = user_result.scalar_one_or_none()
             acquirer_name = f"{acquirer.first_name} {acquirer.last_name}" if acquirer else "Unknown User"
 
-            log = SupplyLog(
+            log = SupplyLog, AccountRequest(
                 supply_id=acquiring.supply_id,
                 action="Acquiring Deleted",
                 details=f"Acquiring request deleted for {supply_name} by {acquirer_name}",
@@ -1199,3 +1200,202 @@ async def bulk_delete_acquiring_requests(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting acquiring requests: {str(e)}")
+
+
+@router.websocket("/ws/notifications")
+async def websocket_notifications(websocket: WebSocket, token: str = Query(...)):
+    await websocket.accept()
+    
+    if not token:
+        await websocket.close(code=1008)
+        return
+        
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            await websocket.close(code=1008)
+            return
+    except JWTError:
+        await websocket.close(code=1008)
+        return
+
+    try:
+        while True:
+            async with SessionLocal() as db:
+                # Get user ID
+                user_res = await db.execute(select(User).where(User.email == email))
+                current_user = user_res.scalar_one_or_none()
+                
+                if not current_user:
+                    await websocket.close(code=1008)
+                    return
+
+                # 1. Personal Notifications
+                notif_res = await db.execute(
+                    select(Notification)
+                    .where(Notification.user_id == current_user.id)
+                    .order_by(Notification.created_at.desc())
+                )
+                personal_notifs = []
+                for notif in notif_res.scalars().all():
+                    personal_notifs.append({
+                        "id": str(notif.id),
+                        "title": notif.title,
+                        "message": notif.message,
+                        "is_read": notif.is_read,
+                        "type": notif.type,
+                        "created_at": notif.created_at.isoformat() if notif.created_at else None
+                    })
+
+                # Admin/Super Admin only data
+                is_admin = current_user.acc_role in ["Admin", "Super Admin"]
+                
+                return_data = []
+                done_data = []
+                pending_requests = []
+                
+                if is_admin:
+                    # 2. Return Notifications
+                    return_query = (
+                        select(ReturnNotification, Borrowing, Equipment, User)
+                        .join(Borrowing, ReturnNotification.borrowing_id == Borrowing.id)
+                        .join(Equipment, Borrowing.borrowed_item == Equipment.id)
+                        .join(User, Borrowing.borrowers_id == User.id)
+                        .where(ReturnNotification.status == "Pending")
+                        .order_by(ReturnNotification.created_at.desc())
+                    )
+                    return_result = await db.execute(return_query)
+                    for notif, borrowing, equipment, user in return_result.all():
+                        return_data.append({
+                            "id": notif.id,
+                            "borrowing_id": notif.borrowing_id,
+                            "receiver_name": notif.receiver_name,
+                            "status": notif.status,
+                            "message": notif.message,
+                            "created_at": notif.created_at.isoformat() if notif.created_at else None,
+                            "equipment_name": equipment.name,
+                            "borrower_name": f"{user.first_name} {user.last_name}"
+                        })
+                        
+                    # 3. Done Notifications
+                    done_query = (
+                        select(DoneNotification, Booking, Facility, User)
+                        .join(Booking, DoneNotification.booking_id == Booking.id)
+                        .join(Facility, Booking.facility_id == Facility.facility_id)
+                        .join(User, Booking.bookers_id == User.id)
+                        .where(DoneNotification.status == "Pending")
+                        .order_by(DoneNotification.created_at.desc())
+                    )
+                    done_result = await db.execute(done_query)
+                    for notif, booking, facility, user in done_result.all():
+                        done_data.append({
+                            "id": notif.id,
+                            "booking_id": notif.booking_id,
+                            "completion_notes": notif.completion_notes,
+                            "status": notif.status,
+                            "message": notif.message,
+                            "created_at": notif.created_at.isoformat() if notif.created_at else None,
+                            "facility_name": facility.facility_name,
+                            "booker_name": f"{user.first_name} {user.last_name}"
+                        })
+
+                    # 4. Pending Requests
+                    borrowing_query = (
+                        select(Borrowing, Equipment, User)
+                        .join(Equipment, Borrowing.borrowed_item == Equipment.id)
+                        .join(User, Borrowing.borrowers_id == User.id)
+                        .where(Borrowing.request_status == "Pending")
+                        .order_by(Borrowing.created_at.desc())
+                    )
+                    for borrowing, equipment, user in (await db.execute(borrowing_query)).all():
+                        pending_requests.append({
+                            "id": borrowing.id,
+                            "request_type": "borrowing",
+                            "request_id": borrowing.id,
+                            "requester_name": f"{user.first_name} {user.last_name}",
+                            "item_name": equipment.name,
+                            "status": "pending",
+                            "message": "New borrowing request submitted",
+                            "created_at": borrowing.created_at.isoformat() if borrowing.created_at else None,
+                            "purpose": borrowing.purpose
+                        })
+
+                    booking_query = (
+                        select(Booking, Facility, User)
+                        .join(Facility, Booking.facility_id == Facility.facility_id)
+                        .join(User, Booking.bookers_id == User.id)
+                        .where(Booking.status == "Pending")
+                        .order_by(Booking.created_at.desc())
+                    )
+                    for booking, facility, user in (await db.execute(booking_query)).all():
+                        pending_requests.append({
+                            "id": booking.id,
+                            "request_type": "booking",
+                            "request_id": booking.id,
+                            "requester_name": f"{user.first_name} {user.last_name}",
+                            "item_name": facility.facility_name,
+                            "status": "pending",
+                            "message": "New booking request submitted",
+                            "created_at": booking.created_at.isoformat() if booking.created_at else None,
+                            "purpose": booking.purpose
+                        })
+
+                    acquiring_query = (
+                        select(Acquiring, Supply, User)
+                        .join(Supply, Acquiring.acquired_item == Supply.id)
+                        .join(User, Acquiring.acquirers_id == User.id)
+                        .where(Acquiring.request_status == "Pending")
+                        .order_by(Acquiring.created_at.desc())
+                    )
+                    for acquiring, supply, user in (await db.execute(acquiring_query)).all():
+                        pending_requests.append({
+                            "id": acquiring.id,
+                            "request_type": "acquiring",
+                            "request_id": acquiring.id,
+                            "requester_name": f"{user.first_name} {user.last_name}",
+                            "item_name": supply.name,
+                            "status": "pending",
+                            "message": "New acquiring request submitted",
+                            "created_at": acquiring.created_at.isoformat() if acquiring.created_at else None,
+                            "purpose": acquiring.purpose,
+                            "quantity": acquiring.quantity
+                        })
+
+                    # Sort pending requests by date
+                    pending_requests.sort(
+                        key=lambda x: x["created_at"] if x["created_at"] else "",
+                        reverse=True
+                    )
+
+                
+                # We can also add account_requests for Super Admin
+                account_requests_data = []
+                if current_user.acc_role == "Super Admin":
+                    # Pending users
+                    pending_users_query = select(AccountRequest).where(AccountRequest.status == "Pending")
+                    for p_user in (await db.execute(pending_users_query)).scalars().all():
+                        account_requests_data.append({
+                            "id": str(p_user.id),
+                            "status": p_user.status,
+                            "created_at": p_user.created_at.isoformat() if p_user.created_at else None
+                        })
+
+                await websocket.send_json({
+                    "personalNotifications": personal_notifs,
+                    "returnNotifications": return_data,
+                    "doneNotifications": done_data,
+                    "pendingRequests": pending_requests,
+                    "accountRequests": account_requests_data
+                })
+                
+            await asyncio.sleep(2)
+            
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        try:
+            await websocket.close(code=1011)
+        except:
+            pass
