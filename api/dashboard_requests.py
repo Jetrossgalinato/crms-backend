@@ -1249,10 +1249,25 @@ async def websocket_notifications(websocket: WebSocket, token: str = Query(...))
                     })
 
                 # Admin/Super Admin only data
-                super_admin_roles = ["CCIS Dean", "Lab Technician", "Comlab Adviser", "Super Admin"]
-                admin_roles = ["Department Chairperson", "Associate Dean", "Admin"]
-                
-                is_admin_or_super = current_user.acc_role in admin_roles or current_user.acc_role in super_admin_roles
+                # Normalize roles to avoid mismatches from casing/extra spaces/hyphens.
+                super_admin_role_keys = {
+                    "ccisdean",
+                    "labtechnician",
+                    "comlabadviser",
+                    "superadmin",
+                }
+                admin_role_keys = {
+                    "departmentchairperson",
+                    "associatedean",
+                    "admin",
+                }
+
+                role_key = "".join(
+                    ch for ch in (current_user.acc_role or "").casefold() if ch.isalnum()
+                )
+                is_admin_or_super = (
+                    role_key in admin_role_keys or role_key in super_admin_role_keys
+                )
                 
                 return_data = []
                 done_data = []
@@ -1374,7 +1389,7 @@ async def websocket_notifications(websocket: WebSocket, token: str = Query(...))
                 
                 # We can also add account_requests for Super Admin
                 account_requests_data = []
-                if current_user.acc_role in super_admin_roles:
+                if role_key in super_admin_role_keys:
                     # Pending users
                     pending_users_query = select(AccountRequest).where(AccountRequest.status == "Pending")
                     for p_user in (await db.execute(pending_users_query)).scalars().all():
