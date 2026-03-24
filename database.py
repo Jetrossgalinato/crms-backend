@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import os
+import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -30,6 +31,33 @@ def get_ph_time():
 async def get_db():
     async with SessionLocal() as session:
         yield session
+
+async def run_startup_migrations(max_attempts: int = 15, delay_seconds: float = 1.0) -> None:
+    """Run small, idempotent schema migrations on startup.
+
+    This keeps existing Postgres volumes compatible with current SQLAlchemy models.
+    """
+    from sqlalchemy import text
+
+    last_error: Exception | None = None
+    for _ in range(max_attempts):
+        try:
+            async with engine.begin() as conn:
+                # Ensure `equipments.availability` exists (older schemas may not have it).
+                await conn.execute(
+                    text("ALTER TABLE equipments ADD COLUMN IF NOT EXISTS availability VARCHAR DEFAULT 'Available';")
+                )
+                await conn.execute(
+                    text("UPDATE equipments SET availability = 'Available' WHERE availability IS NULL;")
+                )
+            return
+        except Exception as exc:
+            last_error = exc
+            await asyncio.sleep(delay_seconds)
+
+    # If we get here, DB wasn't reachable/ready or schema is incompatible.
+    if last_error:
+        raise last_error
 
 class User(Base):
     __tablename__ = "users"

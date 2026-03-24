@@ -104,6 +104,7 @@ CREATE TABLE equipments (
     facility_id INTEGER,
     category VARCHAR,
     status VARCHAR,
+    availability VARCHAR NOT NULL DEFAULT 'Available',
     date_acquire VARCHAR,
     supplier VARCHAR,
     amount VARCHAR,
