@@ -22,7 +22,7 @@ from api.supplies_management import router as supplies_management_router
 from api.my_requests import router as my_requests_router
 from api.dashboard_requests import router as dashboard_requests_router
 from api.users_management import router as users_management_router
-from database import engine, Base
+from database import engine, Base, run_startup_migrations
 from sqlalchemy import text
 import os
 import logging
@@ -38,6 +38,8 @@ from services.scheduler import start_scheduler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure DB schema is compatible with the current code (idempotent).
+    await run_startup_migrations()
     # Start the scheduler on startup
     scheduler = start_scheduler()
     yield
